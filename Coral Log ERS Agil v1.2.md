@@ -1,11 +1,11 @@
 ## Especificación de Requisitos de Software Jesús Acosta
 
-Versión 1.1
+Versión 1.2
 
 
-| Especificación de Requisitos de Software | Versión: | 1.1 |
+| Especificación de Requisitos de Software | Versión: | 1.2 |
 | --- | --- | --- |
-| Coral Log | Fecha: | 03/jul/26 |
+| Coral Log | Fecha: | 25/jul/26 |
 | ERS |   |   |
 
 ## Histórico de Revisiones
@@ -15,19 +15,21 @@ Versión 1.1
 | 03/jul/26 | 1.0 | Contenido de los sprints y requerimientos | Jesús Acosta |
 | 06/jul/26 | 1.1 | Cambio de los identificadores de las HU (los de la | Jesús Acosta |
 |   |   | épica 2 pasaron a ser de la 1 y viceversa) |   |
+| 25/jul/26 | 1.2 | Cambio de los identificadores de las HU en el título | Jesús Acosta |
+|   | del sprint. |   |   |
 
 
-| Especificación de Requisitos de Software | Versión: | 1.1 |
+| Especificación de Requisitos de Software | Versión: | 1.2 |
 | --- | --- | --- |
-| Coral Log | Fecha: | 03/jul/26 |
+| Coral Log | Fecha: | 25/jul/26 |
 | ERS |   |   |
 
 ## Tabla de Contenidos
 
 
-| Especificación de Requisitos de Software | Versión: | 1.1 |
+| Especificación de Requisitos de Software | Versión: | 1.2 |
 | --- | --- | --- |
-| Coral Log | Fecha: | 03/jul/26 |
+| Coral Log | Fecha: | 25/jul/26 |
 | ERS |   |   |
 
 ## Especificación de Requisitos de Software Coral Log
@@ -38,7 +40,7 @@ Este artefacto detalla los requisitos de software para el Sistema <Nombre del Si
 
 ## 1.1 Sprint 1
 
-Historias del Calendario y Registro (HU-04, 05, 06).
+Historias del Calendario y Registro (HU-01, 02, 03).
 
 - 1.1.1 HU-01 Calendario mensual interactivo :
 
@@ -49,9 +51,9 @@ Historias del Calendario y Registro (HU-04, 05, 06).
 |   |   | Product Owner: Dependerá de la región (Locale) del dispositivo, pero de manera predeterminada el calendario debe posicionar el Lunes en la primera columna. |   |   |   |
 
 
-| Especificación de Requisitos de Software | Versión: | 1.1 |
+| Especificación de Requisitos de Software | Versión: | 1.2 |
 | --- | --- | --- |
-| Coral Log | Fecha: | 03/jul/26 |
+| Coral Log | Fecha: | 25/jul/26 |
 | ERS |   |   |
 
 ## 1.1.2 HU-02 Registro de sangrado, flujo y cólicos :
@@ -103,9 +105,9 @@ Historias del Calendario y Registro (HU-04, 05, 06).
 |   | paleta de colores de baja opacidad | las fases en el calendario debe |
 
 
-| Especificación de Requisitos de Software | Versión: | 1.1 |
+| Especificación de Requisitos de Software | Versión: | 1.2 |
 | --- | --- | --- |
-| Coral Log | Fecha: | 03/jul/26 |
+| Coral Log | Fecha: | 25/jul/26 |
 | ERS |   |   |
 | adaptativa en colors.xml (o en la | adaptarse conservando legibilidad |   |
 | definición del tema de Jetpack | sin causar molestias visuales por |   |
@@ -116,7 +118,7 @@ Historias del Calendario y Registro (HU-04, 05, 06).
 
 ## 1.2 Sprint 2
 
-Historias de la Pantalla Principal (HU-01, 02, 03).
+Historias de la Pantalla Principal (HU-04, 05, 06).
 
 ## 1.2.1 HU-04 Días faltantes para el próximo periodo :
 
@@ -143,9 +145,9 @@ Historias de la Pantalla Principal (HU-01, 02, 03).
 |   | alerta. |   |
 
 
-| Especificación de Requisitos de Software | Versión: | 1.1 |
+| Especificación de Requisitos de Software | Versión: | 1.2 |
 | --- | --- | --- |
-| Coral Log | Fecha: | 03/jul/26 |
+| Coral Log | Fecha: | 25/jul/26 |
 | ERS |   |   |
 
 ## 1.2.2 HU-05: Visualización de la fase actual
@@ -189,9 +191,9 @@ Historias de la Pantalla Principal (HU-01, 02, 03).
 |   |   | en el idioma seleccionado. |
 
 
-| Especificación de Requisitos de Software | Versión: | 1.1 |
+| Especificación de Requisitos de Software | Versión: | 1.2 |
 | --- | --- | --- |
-| Coral Log | Fecha: | 03/jul/26 |
+| Coral Log | Fecha: | 25/jul/26 |
 | ERS |   |   |
 
 ## 1.3 Sprint 3
@@ -224,9 +226,9 @@ Historias del Análisis de Salud (HU-07, 08, 09, 10)
 |   | (ej. "28 días"). |   |
 
 
-| Especificación de Requisitos de Software | Versión: | 1.1 |
+| Especificación de Requisitos de Software | Versión: | 1.2 |
 | --- | --- | --- |
-| Coral Log | Fecha: | 03/jul/26 |
+| Coral Log | Fecha: | 25/jul/26 |
 | ERS |   |   |
 
 ## 1.3.2 HU-08: Nivel de flujo promedio
@@ -274,9 +276,9 @@ Historias del Análisis de Salud (HU-07, 08, 09, 10)
 | irreales. | un diseño de "Empty State" (estado | ocultarse y ser reemplazadas por |
 
 
-| Especificación de Requisitos de Software | Versión: | 1.1 |
+| Especificación de Requisitos de Software | Versión: | 1.2 |
 | --- | --- | --- |
-| Coral Log | Fecha: | 03/jul/26 |
+| Coral Log | Fecha: | 25/jul/26 |
 | ERS |   |   |
 
 vacío) con un texto amigable y un ícono indicando que necesitamos más tiempo.
@@ -294,9 +296,9 @@ Historias de Apropiación Visual (HU-11, 12)
 |   |   |   |   | Dado que la usuaria cierra forzosamente la aplicación, cuando vuelva a abrirla, entonces la interfaz debe leer DataStore y renderizar el último tema seleccionado. |   |
 
 
-| Especificación de Requisitos de Software | Versión: | 1.1 |
+| Especificación de Requisitos de Software | Versión: | 1.2 |
 | --- | --- | --- |
-| Coral Log | Fecha: | 03/jul/26 |
+| Coral Log | Fecha: | 25/jul/26 |
 | ERS |   |   |
 
 ## 1.4.2 HU-12: Selección de fuente tipográfica
@@ -333,9 +335,9 @@ Historias de Apropiación Visual (HU-11, 12)
 - datos local (Room) deben ser atómicas. Si ocurre una interrupción abrupta en el dispositivo, la base de datos no debe quedar en un estado corrupto. 2.3.2 Madurez Todas las operaciones de inserción, actualización o eliminación de registros en la base de
 
 
-| Especificación de Requisitos de Software | Versión: | 1.1 |
+| Especificación de Requisitos de Software | Versión: | 1.2 |
 | --- | --- | --- |
-| Coral Log | Fecha: | 03/jul/26 |
+| Coral Log | Fecha: | 25/jul/26 |
 | ERS |   |   |
 
 ## 2.4 Eficiencia de Desempeño
