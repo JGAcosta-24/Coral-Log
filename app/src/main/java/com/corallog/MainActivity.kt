@@ -12,6 +12,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import java.time.LocalDate
+import java.time.YearMonth
+import java.time.format.TextStyle
+import java.util.Locale
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -68,7 +72,9 @@ enum class CyclePhase {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CoralLogScreen() {
-    var selectedDay by remember { mutableIntStateOf(3) } // Hoy (Day 3)
+    val today = remember { LocalDate.now() }
+    var currentMonth by remember { mutableStateOf(YearMonth.now()) }
+    var selectedDay by remember { mutableIntStateOf(today.dayOfMonth) }
     var isPeriodoLogged by remember { mutableStateOf(true) }
     var flujoLevel by remember { mutableIntStateOf(0) }
     var colicosLevel by remember { mutableIntStateOf(0) }
@@ -76,12 +82,23 @@ fun CoralLogScreen() {
 
     val scrollState = rememberScrollState()
 
-    // 31 Days of July 2026, starting Wed (3 blank days at start)
-    val dayStates = remember {
+    // Dynamic days calculation based on currentMonth
+    val dayStates = remember(currentMonth) {
         val daysList = mutableListOf<DayState?>()
-        repeat(3) { daysList.add(null) }
+        
+        // Find the day of week for the 1st of the month (1 = Mon, 7 = Sun)
+        val firstOfMonth = currentMonth.atDay(1)
+        val firstDayOfWeek = firstOfMonth.dayOfWeek.value 
+        
+        // ERS Requirement: Default Monday as first column. 
+        // If Mon=1, we need 0 blanks. If Tue=2, we need 1 blank.
+        repeat(firstDayOfWeek - 1) { daysList.add(null) }
 
-        for (day in 1..31) {
+        val daysInMonth = currentMonth.lengthOfMonth()
+        for (day in 1..daysInMonth) {
+            val date = currentMonth.atDay(day)
+            
+            // Temporary placeholder phase logic (until we connect Room)
             val phase = when (day) {
                 in 1..7 -> CyclePhase.MENSTRUAL
                 in 8..15 -> CyclePhase.FOLICULAR
@@ -89,13 +106,13 @@ fun CoralLogScreen() {
                 in 19..28 -> CyclePhase.LUTEA
                 else -> CyclePhase.NONE
             }
-            val cycleDay = if (day == 1) 20 else day - 1
+            
             daysList.add(
                 DayState(
                     dayOfMonth = day,
-                    cycleDay = cycleDay,
+                    cycleDay = day, // Placeholder
                     phase = phase,
-                    isToday = day == 3
+                    isToday = date == today
                 )
             )
         }
@@ -159,6 +176,8 @@ fun CoralLogScreen() {
             verticalArrangement = Arrangement.spacedBy(40.dp)
         ) {
             CalendarCard(
+                currentMonth = currentMonth,
+                onMonthChange = { currentMonth = it },
                 dayStates = dayStates,
                 selectedDay = selectedDay,
                 onDayClick = { selectedDay = it }
@@ -180,6 +199,8 @@ fun CoralLogScreen() {
 
 @Composable
 fun CalendarCard(
+    currentMonth: YearMonth,
+    onMonthChange: (YearMonth) -> Unit,
     dayStates: List<DayState?>,
     selectedDay: Int,
     onDayClick: (Int) -> Unit
@@ -198,7 +219,7 @@ fun CalendarCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = { }) {
+                IconButton(onClick = { onMonthChange(currentMonth.minusMonths(1)) }) {
                     Icon(Icons.Default.ChevronLeft, "Mes anterior", tint = OnSurface)
                 }
 
@@ -211,17 +232,22 @@ fun CalendarCard(
                             .background(SurfaceContainerHigh, CircleShape)
                             .padding(horizontal = 24.dp, vertical = 4.dp)
                     ) {
-                        Text("julio", color = OnSurface, fontWeight = FontWeight.Medium, fontSize = 20.sp)
+                        Text(
+                            text = currentMonth.month.getDisplayName(TextStyle.FULL, Locale("es")),
+                            color = OnSurface,
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 20.sp
+                        )
                     }
-                    Text("2026", color = OnSurfaceVariant, fontSize = 20.sp)
+                    Text(text = currentMonth.year.toString(), color = OnSurfaceVariant, fontSize = 20.sp)
                 }
 
-                IconButton(onClick = { }) {
+                IconButton(onClick = { onMonthChange(currentMonth.plusMonths(1)) }) {
                     Icon(Icons.Default.ChevronRight, "Mes siguiente", tint = OnSurface)
                 }
             }
 
-            val weekDays = listOf("Sol", "lunes", "martes", "miércoles", "jueves", "vie", "sábado")
+            val weekDays = listOf("lun", "mar", "mié", "jue", "vie", "sáb", "dom")
             Row(modifier = Modifier.fillMaxWidth()) {
                 weekDays.forEach { dayName ->
                     Text(

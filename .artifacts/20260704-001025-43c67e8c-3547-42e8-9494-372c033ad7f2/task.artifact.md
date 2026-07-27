@@ -6,16 +6,16 @@
 - Implement HU-02 (Registering bleeding, flow, and cramps).
 
 ## Todos
-- [/] Research and Planning
+- [x] Research and Planning
 	- [x] Analyze `CoralLog-rules.md`, `Coral Log Brief Agil v.1.1.md`, and `Coral Log ERS Agil v1.1.md`
-	- [/] Design Database Schema (Entities & DAOs)
-- [ ] Core Data Layer Implementation
-	- [ ] Create `CycleEntity` and `SymptomEntity`
-	- [ ] Create `CycleDao` and `SymptomDao`
-	- [ ] Implement `AppDatabase` (Room)
+	- [x] Design Database Schema (Entities & DAOs)
+- [x] Core Data Layer Implementation
+	- [x] Create `CycleEntity` and `SymptomEntity`
+	- [x] Create `CycleDao` and `SymptomDao`
+	- [x] Implement `AppDatabase` (Room)
 	- [ ] Set up Koin module for Database and Repositories
-- [ ] Feature: Calendar Persistence
-	- [ ] Implement `CalendarRepository`
+- [/] Feature: Calendar Persistence
+	- [x] Implement `CalendarRepository`
 	- [ ] Update `CalendarViewModel` to interact with Repository
 - [ ] UI Integration (HU-02)
 	- [ ] Implement `ModalBottomSheet` for logging
