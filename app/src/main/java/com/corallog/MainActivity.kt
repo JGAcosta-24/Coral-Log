@@ -1,9 +1,9 @@
-package com.example.corallog
+package com.corallog
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.BorderStroke
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -25,11 +25,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.corallog.ui.theme.*
+import com.corallog.ui.theme.*
 
+/**
+ * Main entry point of the Coral Log application.
+ * Currently, hosts the preview UI. To be refactored into a navigation-based system.
+ */
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
         setContent {
             CoralLogTheme {
                 Surface(
@@ -43,6 +48,9 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+/**
+ * Internal state for a calendar day.
+ */
 data class DayState(
     val dayOfMonth: Int,
     val cycleDay: Int,
@@ -50,6 +58,9 @@ data class DayState(
     val isToday: Boolean = false
 )
 
+/**
+ * Enumeration of menstrual cycle phases.
+ */
 enum class CyclePhase {
     MENSTRUAL, FOLICULAR, OVULACION, LUTEA, NONE
 }
@@ -57,10 +68,10 @@ enum class CyclePhase {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CoralLogScreen() {
-    var selectedDay by remember { mutableStateOf(3) } // Hoy (Day 3)
+    var selectedDay by remember { mutableIntStateOf(3) } // Hoy (Day 3)
     var isPeriodoLogged by remember { mutableStateOf(true) }
-    var flujoLevel by remember { mutableStateOf(0) }
-    var colicosLevel by remember { mutableStateOf(0) }
+    var flujoLevel by remember { mutableIntStateOf(0) }
+    var colicosLevel by remember { mutableIntStateOf(0) }
     var activeTab by remember { mutableStateOf("Calendario") }
 
     val scrollState = rememberScrollState()
@@ -107,7 +118,7 @@ fun CoralLogScreen() {
                         ) {
                             Icon(
                                 imageVector = Icons.Default.WaterDrop,
-                                contentDescription = "Logo",
+                                contentDescription = null,
                                 tint = PrimaryContainer,
                                 modifier = Modifier.align(Alignment.Center).size(24.dp)
                             )
@@ -131,7 +142,7 @@ fun CoralLogScreen() {
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Surface)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
             )
         },
         bottomBar = {
@@ -238,7 +249,6 @@ fun CalendarCard(
                                 contentAlignment = Alignment.Center
                             ) {
                                 if (dayState != null) {
-                                    val isSelected = dayState.dayOfMonth == selectedDay
                                     val cellBgColor = when (dayState.phase) {
                                         CyclePhase.MENSTRUAL -> PhaseMenstrual
                                         CyclePhase.FOLICULAR -> PhaseFolicular
@@ -260,7 +270,9 @@ fun CalendarCard(
                                             .background(cellBgColor)
                                             .clickable { onDayClick(dayState.dayOfMonth) }
                                             .then(
-                                                if (dayState.isToday) {
+                                                if (dayState.dayOfMonth == selectedDay) {
+                                                    Modifier.border(2.dp, Primary, CircleShape)
+                                                } else if (dayState.isToday) {
                                                     Modifier.border(2.dp, PrimaryContainer, CircleShape)
                                                 } else Modifier
                                             ),
@@ -271,7 +283,7 @@ fun CalendarCard(
                                             verticalArrangement = Arrangement.Center
                                         ) {
                                             Text(
-                                                text = "${dayState.dayOfMonth}",
+                                                text = dayState.dayOfMonth.toString(),
                                                 color = textColor,
                                                 fontWeight = FontWeight.Medium,
                                                 fontSize = 18.sp
@@ -282,7 +294,7 @@ fun CalendarCard(
                                         }
 
                                         Text(
-                                            text = "${dayState.cycleDay}",
+                                            text = dayState.cycleDay.toString(),
                                             color = if (dayState.phase == CyclePhase.NONE) OnSurfaceVariant else textColor.copy(alpha = 0.8f),
                                             fontSize = 9.sp,
                                             modifier = Modifier.align(Alignment.TopEnd).padding(top = 4.dp, end = 4.dp)
