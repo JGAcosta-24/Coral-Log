@@ -13,7 +13,7 @@
 	- [x] Create `CycleEntity` and `SymptomEntity`
 	- [x] Create `CycleDao` and `SymptomDao`
 	- [x] Implement `AppDatabase` (Room)
-	- [ ] Set up Koin module for Database and Repositories
+	- [x] Set up Koin module for Database and Repositories
 - [/] Feature: Calendar Persistence
 	- [x] Implement `CalendarRepository`
 	- [ ] Update `CalendarViewModel` to interact with Repository
