@@ -1,4 +1,4 @@
-package com.example.corallog.ui.theme
+package com.corallog.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

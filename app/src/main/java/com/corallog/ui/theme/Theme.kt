@@ -1,4 +1,4 @@
-package com.example.corallog.ui.theme
+package com.corallog.ui.theme
 
 import android.app.Activity
 import androidx.compose.material3.MaterialTheme
