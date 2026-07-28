@@ -16,7 +16,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -100,7 +99,7 @@ fun CalendarScreen(
                         text = "Coral Log",
                         fontFamily = ManropeFontFamily,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 24.sp, // Restaurado tamaño original
+                        fontSize = 24.sp,
                         color = Primary
                     )
                 },
@@ -119,8 +118,8 @@ fun CalendarScreen(
                 .fillMaxSize()
                 .background(Background)
                 .verticalScroll(scrollState)
-                .padding(horizontal = 20.dp, vertical = 5.dp), // Padding estándar para dar aire
-            verticalArrangement = Arrangement.spacedBy(24.dp) // Espaciado balanceado
+                .padding(horizontal = 20.dp, vertical = 5.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
             CalendarCard(
                 currentMonth = uiState.currentMonth,
@@ -152,20 +151,21 @@ fun CalendarScreen(
                     }
                 }
             } else {
-                // Inline logging section
+                // Inline logging section (HU-02 updated)
                 val currentSymptom = uiState.symptoms[uiState.selectedDate.toString()]
                 LoggingSectionCard(
                     selectedDate = uiState.selectedDate,
                     isBleeding = currentSymptom?.isBleeding ?: false,
                     flowLevel = currentSymptom?.flowLevel ?: 0,
                     crampIntensity = currentSymptom?.crampIntensity ?: 0,
-                    onUpdate = { bleeding, flow, cramps ->
-                        viewModel.onSaveSymptom(uiState.selectedDate, bleeding, flow, cramps)
+                    clotLevel = currentSymptom?.clotLevel ?: 0,
+                    onUpdate = { bleeding, flow, cramps, clots ->
+                        viewModel.onSaveSymptom(uiState.selectedDate, bleeding, flow, cramps, clots)
                     }
                 )
             }
             
-            Spacer(modifier = Modifier.weight(1f)) // Empuja el contenido hacia arriba sin dejar hueco al final
+            Spacer(modifier = Modifier.weight(1f))
         }
     }
 }
@@ -184,7 +184,7 @@ fun CalendarCard(
         colors = CardDefaults.cardColors(containerColor = SurfaceContainerLow)
     ) {
         Column(
-            modifier = Modifier.padding(24.dp), // Restaurado padding generoso
+            modifier = Modifier.padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Row(
@@ -215,12 +215,12 @@ fun CalendarCard(
                 }
             }
 
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) { // Restaurado espacio entre filas
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 dayStates.chunked(7).forEach { week ->
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         for (col in 0..6) {
                             val dayState = week.getOrNull(col)
-                            Box(modifier = Modifier.weight(1f).aspectRatio(1f), contentAlignment = Alignment.Center) { // Aspecto 1:1
+                            Box(modifier = Modifier.weight(1f).aspectRatio(1f), contentAlignment = Alignment.Center) {
                                 if (dayState != null) {
                                     val cellBgColor = when (dayState.phase) {
                                         CyclePhase.MENSTRUAL -> PhaseMenstrual
@@ -249,14 +249,19 @@ fun CalendarCard(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoggingSectionCard(
     selectedDate: LocalDate,
     isBleeding: Boolean,
     flowLevel: Int,
     crampIntensity: Int,
-    onUpdate: (Boolean, Int, Int) -> Unit
+    clotLevel: Int,
+    onUpdate: (Boolean, Int, Int, Int) -> Unit
 ) {
+    val flowOptions = listOf("Mínimo", "Leve", "Moderado", "Alto", "Abundante")
+    val clotOptions = listOf("Leve", "Moderado", "Alto")
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -264,7 +269,7 @@ fun LoggingSectionCard(
     ) {
         Column(
             modifier = Modifier.padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
                 text = "Registro para ${selectedDate.dayOfMonth} de ${selectedDate.month.getDisplayName(TextStyle.FULL, Locale("es"))}",
@@ -274,51 +279,109 @@ fun LoggingSectionCard(
                 fontFamily = ManropeFontFamily
             )
 
+            // Checkbox for bleeding
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Icon(Icons.Default.WaterDrop, null, tint = ColorPeriodoRed, modifier = Modifier.size(24.dp))
-                    Text("¿Hubo sangrado?", color = OnSurface, fontSize = 16.sp)
-                }
-                Switch(
-                    checked = isBleeding, 
-                    onCheckedChange = { onUpdate(it, flowLevel, crampIntensity) }, 
-                    colors = SwitchDefaults.colors(checkedThumbColor = ColorPeriodoRed)
+                Checkbox(
+                    checked = isBleeding,
+                    onCheckedChange = { onUpdate(it, flowLevel, crampIntensity, clotLevel) },
+                    colors = CheckboxDefaults.colors(checkedColor = ColorPeriodoRed)
                 )
+                Icon(Icons.Default.WaterDrop, null, tint = ColorPeriodoRed, modifier = Modifier.size(24.dp))
+                Text("¿Hubo sangrado?", color = OnSurface, fontSize = 16.sp)
             }
 
-            // Flow Level - Always visible, disabled/grey if not bleeding
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("Nivel de Flujo", color = if (isBleeding) OnSurfaceVariant else OnSurfaceVariant.copy(alpha = 0.4f), fontSize = 14.sp)
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    repeat(3) { i ->
-                        val level = i + 1
-                        FilterChip(
-                            enabled = isBleeding,
-                            selected = flowLevel == level,
-                            onClick = { onUpdate(isBleeding, level, crampIntensity) },
-                            label = { Text("Nivel $level") }
-                        )
-                    }
-                }
-            }
+            // Dropdown Symptom Selectors
+            SymptomDropdownRow(
+                label = "Flujo",
+                options = flowOptions,
+                selectedIndex = flowLevel - 1,
+                enabled = isBleeding,
+                onSelectionChange = { index -> onUpdate(isBleeding, index + 1, crampIntensity, clotLevel) }
+            )
 
-            // Cramp Intensity - Always visible, disabled/grey if not bleeding
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("Intensidad de Cólicos", color = if (isBleeding) OnSurfaceVariant else OnSurfaceVariant.copy(alpha = 0.4f), fontSize = 14.sp)
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    repeat(3) { i ->
-                        val level = i + 1
-                        FilterChip(
-                            enabled = isBleeding,
-                            selected = crampIntensity == level,
-                            onClick = { onUpdate(isBleeding, flowLevel, level) },
-                            label = { Text("Nivel $level") }
-                        )
-                    }
+            SymptomDropdownRow(
+                label = "Cólicos",
+                options = flowOptions,
+                selectedIndex = crampIntensity - 1,
+                enabled = isBleeding,
+                onSelectionChange = { index -> onUpdate(isBleeding, flowLevel, index + 1, clotLevel) }
+            )
+
+            SymptomDropdownRow(
+                label = "Coágulos",
+                options = clotOptions,
+                selectedIndex = clotLevel - 1,
+                enabled = isBleeding,
+                onSelectionChange = { index -> onUpdate(isBleeding, flowLevel, crampIntensity, index + 1) }
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SymptomDropdownRow(
+    label: String,
+    options: List<String>,
+    selectedIndex: Int,
+    enabled: Boolean,
+    onSelectionChange: (Int) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            color = if (enabled) OnSurface else OnSurface.copy(alpha = 0.4f),
+            fontSize = 16.sp,
+            modifier = Modifier.weight(1f)
+        )
+
+        ExposedDropdownMenuBox(
+            expanded = expanded && enabled,
+            onExpandedChange = { if (enabled) expanded = !expanded },
+            modifier = Modifier.width(160.dp)
+        ) {
+            TextField(
+                readOnly = true,
+                value = if (selectedIndex >= 0) options[selectedIndex] else "Seleccionar",
+                onValueChange = { },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color.Transparent,
+                    unfocusedContainerColor = Color.Transparent,
+                    disabledContainerColor = Color.Transparent,
+                    focusedIndicatorColor = if (enabled) Primary else Color.Transparent,
+                    unfocusedIndicatorColor = if (enabled) OnSurfaceVariant else Color.Transparent,
+                    disabledIndicatorColor = Color.Transparent,
+                    disabledTextColor = OnSurface.copy(alpha = 0.4f)
+                ),
+                enabled = enabled,
+                textStyle = LocalTextStyle.current.copy(fontSize = 14.sp),
+                modifier = Modifier.menuAnchor()
+            )
+
+            ExposedDropdownMenu(
+                expanded = expanded && enabled,
+                onDismissRequest = { expanded = false },
+                modifier = Modifier.background(SurfaceContainerHigh)
+            ) {
+                options.forEachIndexed { index, selectionOption ->
+                    DropdownMenuItem(
+                        text = { Text(text = selectionOption, fontSize = 14.sp) },
+                        onClick = {
+                            onSelectionChange(index)
+                            expanded = false
+                        }
+                    )
                 }
             }
         }
