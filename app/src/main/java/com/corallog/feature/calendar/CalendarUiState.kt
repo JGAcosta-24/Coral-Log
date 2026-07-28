@@ -5,12 +5,12 @@ import java.time.LocalDate
 import java.time.YearMonth
 
 /**
- * UI state for the Calendar screen.
+ * UI State for the Calendar Screen.
  */
 data class CalendarUiState(
     val currentMonth: YearMonth = YearMonth.now(),
     val selectedDate: LocalDate = LocalDate.now(),
     val symptoms: Map<String, SymptomEntity> = emptyMap(),
-    val lastPeriodStart: LocalDate? = null,
+    val cycleStarts: List<LocalDate> = emptyList(),
     val isLoading: Boolean = false
 )

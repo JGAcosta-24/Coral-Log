@@ -18,11 +18,10 @@
   <component name="ChangeListManager">
     <list default="true" id="956f9041-3d61-48dd-a3bf-0f3a67dcb188" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Coral Log ERS Agil v1.2.docx.pdf" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Coral Log ERS Agil v1.2.md" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/corallog/data/SymptomDao.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/corallog/data/SymptomDao.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/corallog/feature/calendar/CalendarRepository.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/corallog/feature/calendar/CalendarRepository.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/corallog/feature/calendar/CalendarScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/corallog/feature/calendar/CalendarScreen.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/corallog/feature/calendar/CalendarState.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/corallog/feature/calendar/CalendarUiState.kt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/java/com/corallog/feature/calendar/CalendarViewModel.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/corallog/feature/calendar/CalendarViewModel.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/corallog/feature/calendar/CyclePhaseCalculator.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/corallog/feature/calendar/CyclePhaseCalculator.kt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

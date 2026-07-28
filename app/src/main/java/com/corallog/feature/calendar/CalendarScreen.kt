@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -61,8 +60,8 @@ fun CalendarScreen(
     val scrollState = rememberScrollState()
     var isDaySelected by remember { mutableStateOf(false) }
 
-    // Dynamic days calculation based on uiState.currentMonth and uiState.lastPeriodStart
-    val dayStates = remember(uiState.currentMonth, uiState.lastPeriodStart) {
+    // Dynamic days calculation based on uiState.currentMonth and uiState.cycleStarts
+    val dayStates = remember(uiState.currentMonth, uiState.cycleStarts) {
         val daysList = mutableListOf<DayState?>()
         val firstOfMonth = uiState.currentMonth.atDay(1)
         val firstDayOfWeek = firstOfMonth.dayOfWeek.value 
@@ -74,15 +73,11 @@ fun CalendarScreen(
         for (day in 1..daysInMonth) {
             val date = uiState.currentMonth.atDay(day)
             
-            // HU-03: Real phase calculation based on database lastPeriodStart
-            val phase = if (uiState.lastPeriodStart != null) {
-                CyclePhaseCalculator.calculatePhase(
-                    currentDate = date,
-                    lastPeriodStart = uiState.lastPeriodStart!!
-                )
-            } else {
-                CyclePhase.NONE
-            }
+            // HU-03: Real phase calculation based on all historical cycle starts
+            val phase = CyclePhaseCalculator.calculatePhase(
+                currentDate = date,
+                cycleStarts = uiState.cycleStarts
+            )
             
             daysList.add(
                 DayState(
@@ -122,9 +117,6 @@ fun CalendarScreen(
                 .padding(innerPadding)
                 .fillMaxSize()
                 .background(Background)
-                .pointerInput(Unit) {
-                    detectTapGestures(onTap = { isDaySelected = false })
-                }
                 .verticalScroll(scrollState)
                 .padding(horizontal = 20.dp, vertical = 5.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
@@ -139,11 +131,10 @@ fun CalendarScreen(
                 selectedDay = if (isDaySelected) uiState.selectedDate.dayOfMonth else -1,
                 onDayClick = { day ->
                     val clickedDate = uiState.currentMonth.atDay(day)
-                    // Si toca el día que ya está seleccionado, cerramos el panel
                     if (isDaySelected && uiState.selectedDate == clickedDate) {
+                        // Toggle off if clicking the same day
                         isDaySelected = false
                     } else {
-                        // Si toca un día nuevo, lo seleccionamos y mostramos el panel
                         viewModel.onDateSelected(clickedDate)
                         isDaySelected = true
                     }

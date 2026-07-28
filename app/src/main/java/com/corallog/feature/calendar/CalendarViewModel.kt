@@ -66,51 +66,37 @@ class CalendarViewModel(
                 .map { LocalDate.parse(it) }
                 .sorted()
 
-            val lastPeriodStart = calculateValidLastPeriodStart(bleedingDates)
+            val cycleStarts = calculateAllCycleStarts(bleedingDates)
             
             _uiState.update { state ->
-                state.copy(lastPeriodStart = lastPeriodStart)
+                state.copy(cycleStarts = cycleStarts)
             }
             loadSymptomsForMonth(_uiState.value.currentMonth)
         }
     }
 
     /**
-     * Finds the start of the most recent valid cycle using chronological iteration.
-     * Logic: A new cycle only starts if a bleeding block is >= 21 days from the LAST valid start.
+     * Identifies all valid cycle start dates using a chronological linear approach.
+     * Logic: A new cycle only starts if a bleeding day is >= 21 days from the LAST valid start.
      */
-    private fun calculateValidLastPeriodStart(dates: List<LocalDate>): LocalDate? {
-        if (dates.isEmpty()) return null
+    private fun calculateAllCycleStarts(dates: List<LocalDate>): List<LocalDate> {
+        if (dates.isEmpty()) return emptyList()
 
-        // 1. Group into consecutive blocks
-        val blocks = mutableListOf<MutableList<LocalDate>>()
-        var currentBlock = mutableListOf(dates[0])
+        val cycleStarts = mutableListOf<LocalDate>()
+        var currentCycleStart: LocalDate = dates[0]
+        cycleStarts.add(currentCycleStart)
+
         for (i in 1 until dates.size) {
-            if (ChronoUnit.DAYS.between(dates[i - 1], dates[i]) == 1L) {
-                currentBlock.add(dates[i])
-            } else {
-                blocks.add(currentBlock)
-                currentBlock = mutableListOf(dates[i])
-            }
-        }
-        blocks.add(currentBlock)
-
-        // 2. Identify the true last cycle start using chronological accumulation
-        // Logic requested: Ignore blocks < 21 days from the CURRENT valid start
-        var currentCycleStart: LocalDate = blocks[0].first()
-
-        for (i in 1 until blocks.size) {
-            val nextBlockStart = blocks[i].first()
-            val daysSinceValidStart = ChronoUnit.DAYS.between(currentCycleStart, nextBlockStart)
+            val day = dates[i]
+            val daysSinceValidStart = ChronoUnit.DAYS.between(currentCycleStart, day)
 
             if (daysSinceValidStart >= 21) {
-                // It's a new period, update the current cycle tracker
-                currentCycleStart = nextBlockStart
+                currentCycleStart = day
+                cycleStarts.add(currentCycleStart)
             }
-            // Else: it's spotting, ignore it and keep currentCycleStart as is
         }
 
-        return currentCycleStart
+        return cycleStarts
     }
 
     private fun loadSymptomsForMonth(month: YearMonth) {
