@@ -23,7 +23,8 @@ class CalendarViewModel(
     val uiState: StateFlow<CalendarUiState> = _uiState.asStateFlow()
 
     init {
-        loadSymptomsForMonth(_uiState.value.currentMonth)
+        // Initial load
+        refreshData()
     }
 
     /**
@@ -43,6 +44,7 @@ class CalendarViewModel(
 
     /**
      * Saves or updates a symptom log for a specific date.
+     * If bleeding is false, the entry is removed to maintain data integrity.
      */
     fun onSaveSymptom(
         date: LocalDate,
@@ -52,15 +54,33 @@ class CalendarViewModel(
         clotLevel: Int = 0
     ) {
         viewModelScope.launch {
-            val symptom = SymptomEntity(
-                date = date.toString(),
-                isBleeding = isBleeding,
-                flowLevel = flowLevel,
-                crampIntensity = crampIntensity,
-                clotLevel = clotLevel
-            )
-            repository.upsertSymptom(symptom)
-            // Reload to reflect changes
+            if (isBleeding) {
+                val symptom = SymptomEntity(
+                    date = date.toString(),
+                    isBleeding = true,
+                    flowLevel = flowLevel,
+                    crampIntensity = crampIntensity,
+                    clotLevel = clotLevel
+                )
+                repository.upsertSymptom(symptom)
+            } else {
+                repository.deleteSymptomByDate(date.toString())
+            }
+            // Refresh everything to update cycle start prediction
+            refreshData()
+        }
+    }
+
+    private fun refreshData() {
+        viewModelScope.launch {
+            val today = LocalDate.now().toString()
+            val lastBleeding = repository.getLastBleedingDate(today)
+            
+            _uiState.update { state ->
+                state.copy(
+                    lastPeriodStart = lastBleeding?.let { LocalDate.parse(it) }
+                )
+            }
             loadSymptomsForMonth(_uiState.value.currentMonth)
         }
     }

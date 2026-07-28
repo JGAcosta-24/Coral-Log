@@ -26,4 +26,11 @@ interface SymptomDao {
 
     @Query("DELETE FROM symptoms WHERE date = :date")
     suspend fun deleteSymptomByDate(date: String)
+
+    /**
+     * Finds the most recent date where bleeding was recorded.
+     * Used to identify the start of the current cycle.
+     */
+    @Query("SELECT date FROM symptoms WHERE isBleeding = 1 AND date <= :today ORDER BY date DESC LIMIT 1")
+    suspend fun getLastBleedingDate(today: String): String?
 }

@@ -3,6 +3,7 @@ package com.corallog.feature.calendar
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -17,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -33,7 +35,7 @@ import org.koin.androidx.compose.koinViewModel
  */
 data class DayState(
     val dayOfMonth: Int,
-    val cycleDay: Int,
+    val date: LocalDate,
     val phase: CyclePhase,
     val isToday: Boolean = false
 )
@@ -58,31 +60,33 @@ fun CalendarScreen(
     val scrollState = rememberScrollState()
     var isDaySelected by remember { mutableStateOf(false) }
 
-    // Dynamic days calculation based on uiState.currentMonth
-    val dayStates = remember(uiState.currentMonth) {
+    // Dynamic days calculation based on uiState.currentMonth and uiState.lastPeriodStart
+    val dayStates = remember(uiState.currentMonth, uiState.lastPeriodStart) {
         val daysList = mutableListOf<DayState?>()
         val firstOfMonth = uiState.currentMonth.atDay(1)
         val firstDayOfWeek = firstOfMonth.dayOfWeek.value 
         
+        // Monday as first column (1=Mon, 7=Sun)
         repeat(firstDayOfWeek - 1) { daysList.add(null) }
 
         val daysInMonth = uiState.currentMonth.lengthOfMonth()
         for (day in 1..daysInMonth) {
             val date = uiState.currentMonth.atDay(day)
             
-            // Temporary phase logic (HU-03 Integration pending)
-            val phase = when (day) {
-                in 1..7 -> CyclePhase.MENSTRUAL
-                in 8..15 -> CyclePhase.FOLICULAR
-                in 16..18 -> CyclePhase.OVULACION
-                in 19..28 -> CyclePhase.LUTEA
-                else -> CyclePhase.NONE
+            // HU-03: Real phase calculation based on database lastPeriodStart
+            val phase = if (uiState.lastPeriodStart != null) {
+                CyclePhaseCalculator.calculatePhase(
+                    currentDate = date,
+                    lastPeriodStart = uiState.lastPeriodStart!!
+                )
+            } else {
+                CyclePhase.NONE
             }
             
             daysList.add(
                 DayState(
                     dayOfMonth = day,
-                    cycleDay = day, 
+                    date = date,
                     phase = phase,
                     isToday = date == LocalDate.now()
                 )
@@ -178,13 +182,31 @@ fun CalendarCard(
     selectedDay: Int,
     onDayClick: (Int) -> Unit
 ) {
+    var offsetX by remember { mutableStateOf(0f) }
+
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .pointerInput(currentMonth) {
+                detectHorizontalDragGestures(
+                    onDragEnd = {
+                        if (offsetX > 50) {
+                            onMonthChange(currentMonth.minusMonths(1))
+                        } else if (offsetX < -50) {
+                            onMonthChange(currentMonth.plusMonths(1))
+                        }
+                        offsetX = 0f
+                    },
+                    onHorizontalDrag = { _, dragAmount ->
+                        offsetX += dragAmount
+                    }
+                )
+            },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = SurfaceContainerLow)
     ) {
         Column(
-            modifier = Modifier.padding(24.dp),
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Row(
@@ -197,7 +219,7 @@ fun CalendarCard(
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Box(modifier = Modifier.background(SurfaceContainerHigh, CircleShape).padding(horizontal = 24.dp, vertical = 4.dp)) {
+                    Box(modifier = Modifier.background(SurfaceContainerHigh, CircleShape).padding(horizontal = 16.dp, vertical = 4.dp)) {
                         Text(text = currentMonth.month.getDisplayName(TextStyle.FULL, Locale("es")), color = OnSurface, fontWeight = FontWeight.Medium, fontSize = 20.sp)
                     }
                     Text(text = currentMonth.year.toString(), color = OnSurfaceVariant, fontSize = 20.sp)
@@ -268,8 +290,8 @@ fun LoggingSectionCard(
         colors = CardDefaults.cardColors(containerColor = SurfaceContainer)
     ) {
         Column(
-            modifier = Modifier.padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
                 text = "Registro para ${selectedDate.dayOfMonth} de ${selectedDate.month.getDisplayName(TextStyle.FULL, Locale("es"))}",
@@ -283,7 +305,7 @@ fun LoggingSectionCard(
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Checkbox(
                     checked = isBleeding,
