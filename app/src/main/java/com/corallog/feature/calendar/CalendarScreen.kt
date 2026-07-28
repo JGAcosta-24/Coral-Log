@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -112,66 +113,77 @@ fun CalendarScreen(
             BottomNavBar(activeTab = "Calendario", onTabSelected = { /* TODO: Navigation */ })
         }
     ) { innerPadding ->
-        Column(
+        Box(
             modifier = Modifier
                 .padding(innerPadding)
                 .fillMaxSize()
                 .background(Background)
-                .verticalScroll(scrollState)
-                .padding(horizontal = 20.dp, vertical = 5.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
-        ) {
-            CalendarCard(
-                currentMonth = uiState.currentMonth,
-                onMonthChange = { 
-                    viewModel.onMonthChange(it)
-                    isDaySelected = false 
-                },
-                dayStates = dayStates,
-                selectedDay = if (isDaySelected) uiState.selectedDate.dayOfMonth else -1,
-                onDayClick = { day ->
-                    val clickedDate = uiState.currentMonth.atDay(day)
-                    if (isDaySelected && uiState.selectedDate == clickedDate) {
-                        // Toggle off if clicking the same day
-                        isDaySelected = false
-                    } else {
-                        viewModel.onDateSelected(clickedDate)
-                        isDaySelected = true
-                    }
-                }
-            )
-
-            if (!isDaySelected) {
-                // Legend for phases
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
                 ) {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
-                        LegendItem(color = PhaseMenstrual, label = "Menstrual")
-                        LegendItem(color = PhaseFolicular, label = "Folicular")
-                    }
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
-                        LegendItem(color = PhaseOvulacion, label = "Ovulación")
-                        LegendItem(color = PhaseLutea, label = "Lútea")
-                    }
+                    isDaySelected = false
                 }
-            } else {
-                // Inline logging section (HU-02 updated)
-                val currentSymptom = uiState.symptoms[uiState.selectedDate.toString()]
-                LoggingSectionCard(
-                    selectedDate = uiState.selectedDate,
-                    isBleeding = currentSymptom?.isBleeding ?: false,
-                    flowLevel = currentSymptom?.flowLevel ?: 0,
-                    crampIntensity = currentSymptom?.crampIntensity ?: 0,
-                    clotLevel = currentSymptom?.clotLevel ?: 0,
-                    onUpdate = { bleeding, flow, cramps, clots ->
-                        viewModel.onSaveSymptom(uiState.selectedDate, bleeding, flow, cramps, clots)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(scrollState)
+                    .padding(horizontal = 20.dp, vertical = 5.dp),
+                verticalArrangement = Arrangement.spacedBy(24.dp)
+            ) {
+                CalendarCard(
+                    currentMonth = uiState.currentMonth,
+                    onMonthChange = { 
+                        viewModel.onMonthChange(it)
+                        isDaySelected = false 
+                    },
+                    dayStates = dayStates,
+                    selectedDay = if (isDaySelected) uiState.selectedDate.dayOfMonth else -1,
+                    onDayClick = { day ->
+                        val clickedDate = uiState.currentMonth.atDay(day)
+                        if (isDaySelected && uiState.selectedDate == clickedDate) {
+                            // Toggle off if clicking the same day
+                            isDaySelected = false
+                        } else {
+                            viewModel.onDateSelected(clickedDate)
+                            isDaySelected = true
+                        }
                     }
                 )
+
+                if (!isDaySelected) {
+                    // Legend for phases
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
+                            LegendItem(color = PhaseMenstrual, label = "Menstrual")
+                            LegendItem(color = PhaseFolicular, label = "Folicular")
+                        }
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
+                            LegendItem(color = PhaseOvulacion, label = "Ovulación")
+                            LegendItem(color = PhaseLutea, label = "Lútea")
+                        }
+                    }
+                } else {
+                    // Inline logging section (HU-02 updated)
+                    val currentSymptom = uiState.symptoms[uiState.selectedDate.toString()]
+                    LoggingSectionCard(
+                        selectedDate = uiState.selectedDate,
+                        isBleeding = currentSymptom?.isBleeding ?: false,
+                        flowLevel = currentSymptom?.flowLevel ?: 0,
+                        crampIntensity = currentSymptom?.crampIntensity ?: 0,
+                        clotLevel = currentSymptom?.clotLevel ?: 0,
+                        onUpdate = { bleeding, flow, cramps, clots ->
+                            viewModel.onSaveSymptom(uiState.selectedDate, bleeding, flow, cramps, clots)
+                        }
+                    )
+                }
+                
+                Spacer(modifier = Modifier.weight(1f))
             }
-            
-            Spacer(modifier = Modifier.weight(1f))
         }
     }
 }
@@ -189,6 +201,10 @@ fun CalendarCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) { /* Consume click to prevent dismissal when clicking inside the card background */ }
             .pointerInput(currentMonth) {
                 detectHorizontalDragGestures(
                     onDragEnd = {
@@ -287,7 +303,12 @@ fun LoggingSectionCard(
     val clotOptions = listOf("Leve", "Moderado", "Alto")
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) { /* Consume click to prevent dismissal when clicking inside this card */ },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = SurfaceContainer)
     ) {
