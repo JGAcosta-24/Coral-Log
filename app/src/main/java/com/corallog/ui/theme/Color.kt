@@ -33,7 +33,7 @@ val OutlineVariant = Color(0xFF3D3D3D)
 
 val ColorPeriodoRed = Color(0xFFFF5252)
 
-val PhaseMenstrual = Color(0xFFFFCDD2)
-val PhaseFolicular = Color(0xFFF8BBD0)
-val PhaseOvulacion = Color(0xFFE1BEE7)
-val PhaseLutea = Color(0xFFD1C4E9)
+val PhaseMenstrual = Color(0xFFEF5350) // Rojo suave (Claro y directo)
+val PhaseFolicular = Color(0xFF80CBC4) // Verde agua (Aprovecha el color Tertiary de tu tema)
+val PhaseOvulacion = Color(0xFFFFE082) // Amarillo cálido (Destaca visualmente el pico del ciclo)
+val PhaseLutea = Color(0xFFB39DDB)     // Morado lavanda (Tranquilo y distinto al resto)
