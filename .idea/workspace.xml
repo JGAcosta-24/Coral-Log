@@ -4,16 +4,27 @@
     <shared>
       <config />
     </shared>
+    <layouts>
+      <layout url="file://$PROJECT_DIR$/app/src/main/res/font/font_certs.xml">
+        <config>
+          <theme>@style/Theme.CoralLog</theme>
+        </config>
+      </layout>
+    </layouts>
   </component>
   <component name="AutoImportSettings">
     <option name="autoReloadType" value="NONE" />
   </component>
   <component name="ChangeListManager">
     <list default="true" id="956f9041-3d61-48dd-a3bf-0f3a67dcb188" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/app/src/main/java/com/corallog/CoralLogApp.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/src/main/java/com/corallog/di/KoinModules.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.artifacts/20260704-001025-43c67e8c-3547-42e8-9494-372c033ad7f2/task.artifact.md" beforeDir="false" afterPath="$PROJECT_DIR$/.artifacts/20260704-001025-43c67e8c-3547-42e8-9494-372c033ad7f2/task.artifact.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/AndroidManifest.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/AndroidManifest.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/src/main/java/com/corallog/feature/calendar/CalendarScreen.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/src/main/java/com/corallog/feature/calendar/CalendarState.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/src/main/java/com/corallog/feature/calendar/CalendarViewModel.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/corallog/MainActivity.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/corallog/MainActivity.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/corallog/di/KoinModules.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/corallog/di/KoinModules.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/corallog/ui/theme/Type.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/corallog/ui/theme/Type.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gradle/libs.versions.toml" beforeDir="false" afterPath="$PROJECT_DIR$/gradle/libs.versions.toml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -46,6 +57,13 @@
       </state>
     </system>
   </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="resourceFile" />
+      </list>
+    </option>
+  </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
@@ -69,7 +87,8 @@
     "cidr.known.project.marker": "true",
     "git-widget-placeholder": "Feature-Épica-1",
     "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "C:/Users/17865/OneDrive/Documentos/Proyectos/Coral-Log/app"
+    "last_opened_file_path": "C:/Users/17865/OneDrive/Documentos/Proyectos/Coral-Log/app",
+    "settings.editor.selected.configurable": "preferences.keymap"
   }
 }]]></component>
   <component name="RecentsManager">
@@ -159,6 +178,16 @@
   <component name="play_dynamic_filters_status">
     <option name="appIdToCheckInfo">
       <map>
+        <entry key="com.corallog">
+          <value>
+            <CheckInfo lastCheckTimestamp="1785188298940" />
+          </value>
+        </entry>
+        <entry key="com.corallog.test">
+          <value>
+            <CheckInfo lastCheckTimestamp="1785188298940" />
+          </value>
+        </entry>
         <entry key="com.example.corallog">
           <value>
             <CheckInfo lastCheckTimestamp="1783393591694" />

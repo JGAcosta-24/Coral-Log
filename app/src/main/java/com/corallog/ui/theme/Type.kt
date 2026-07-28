@@ -5,30 +5,41 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.text.googlefonts.GoogleFont
-import androidx.compose.ui.text.googlefonts.Font
+import androidx.compose.ui.text.font.Font
 import com.corallog.R
 
-val provider = GoogleFont.Provider(
-    providerAuthority = "com.google.android.gms.fonts",
-    providerPackage = "com.google.android.gms",
-    certificates = R.array.com_google_android_gms_fonts_certs
-)
-
-val ManropeFontName = GoogleFont("Manrope")
-
+/**
+ * Custom FontFamily using the local Roboto variable font.
+ */
 val ManropeFontFamily = FontFamily(
-    Font(googleFont = ManropeFontName, fontProvider = provider),
-    Font(googleFont = ManropeFontName, fontProvider = provider, weight = FontWeight.Medium),
-    Font(googleFont = ManropeFontName, fontProvider = provider, weight = FontWeight.Bold)
+    Font(R.font.roboto_variablefont_wdth_wght)
 )
 
+/**
+ * Typography configurations for the Coral Log application.
+ * This defines the set of text styles used throughout the UI to ensure consistency
+ * with the Material 3 design system.
+ */
 val Typography = Typography(
     bodyLarge = TextStyle(
         fontFamily = ManropeFontFamily,
         fontWeight = FontWeight.Normal,
         fontSize = 16.sp,
         lineHeight = 24.sp,
+        letterSpacing = 0.5.sp
+    ),
+    titleLarge = TextStyle(
+        fontFamily = ManropeFontFamily,
+        fontWeight = FontWeight.Bold,
+        fontSize = 22.sp,
+        lineHeight = 28.sp,
+        letterSpacing = 0.sp
+    ),
+    labelSmall = TextStyle(
+        fontFamily = ManropeFontFamily,
+        fontWeight = FontWeight.Medium,
+        fontSize = 11.sp,
+        lineHeight = 16.sp,
         letterSpacing = 0.5.sp
     )
 )

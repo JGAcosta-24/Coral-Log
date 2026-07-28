@@ -3,7 +3,9 @@ package com.corallog.di
 import androidx.room.Room
 import com.corallog.data.AppDatabase
 import com.corallog.feature.calendar.CalendarRepository
+import com.corallog.feature.calendar.CalendarViewModel
 import org.koin.android.ext.koin.androidContext
+import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.dsl.module
 
 /**
@@ -29,8 +31,15 @@ val dataModule = module {
 }
 
 /**
+ * Koin module for ViewModel dependencies.
+ */
+val viewModelModule = module {
+    viewModel { CalendarViewModel(get()) }
+}
+
+/**
  * Main Koin module aggregation.
  */
 val appModule = module {
-    includes(dataModule)
+    includes(dataModule, viewModelModule)
 }
