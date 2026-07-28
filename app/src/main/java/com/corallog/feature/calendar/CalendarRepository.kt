@@ -70,8 +70,8 @@ class CalendarRepository(
         symptomDao.deleteSymptomByDate(date)
 
     /**
-     * Retrieves the most recent bleeding start date before or on a given date.
+     * Retrieves all dates with recorded bleeding.
      */
-    suspend fun getLastBleedingDate(onDate: String): String? =
-        symptomDao.getLastBleedingDate(onDate)
+    suspend fun getAllBleedingDates(): List<String> =
+        symptomDao.getAllBleedingDates()
 }

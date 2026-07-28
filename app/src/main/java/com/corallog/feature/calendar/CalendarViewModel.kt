@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.YearMonth
+import java.time.temporal.ChronoUnit
 
 /**
  * ViewModel for the Calendar feature.
@@ -23,29 +24,18 @@ class CalendarViewModel(
     val uiState: StateFlow<CalendarUiState> = _uiState.asStateFlow()
 
     init {
-        // Initial load
         refreshData()
     }
 
-    /**
-     * Changes the currently displayed month and loads its symptoms.
-     */
     fun onMonthChange(newMonth: YearMonth) {
         _uiState.update { it.copy(currentMonth = newMonth) }
         loadSymptomsForMonth(newMonth)
     }
 
-    /**
-     * Updates the selected date in the UI.
-     */
     fun onDateSelected(date: LocalDate) {
         _uiState.update { it.copy(selectedDate = date) }
     }
 
-    /**
-     * Saves or updates a symptom log for a specific date.
-     * If bleeding is false, the entry is removed to maintain data integrity.
-     */
     fun onSaveSymptom(
         date: LocalDate,
         isBleeding: Boolean,
@@ -66,23 +56,61 @@ class CalendarViewModel(
             } else {
                 repository.deleteSymptomByDate(date.toString())
             }
-            // Refresh everything to update cycle start prediction
             refreshData()
         }
     }
 
     private fun refreshData() {
         viewModelScope.launch {
-            val today = LocalDate.now().toString()
-            val lastBleeding = repository.getLastBleedingDate(today)
+            val bleedingDates = repository.getAllBleedingDates()
+                .map { LocalDate.parse(it) }
+                .sorted()
+
+            val lastPeriodStart = calculateValidLastPeriodStart(bleedingDates)
             
             _uiState.update { state ->
-                state.copy(
-                    lastPeriodStart = lastBleeding?.let { LocalDate.parse(it) }
-                )
+                state.copy(lastPeriodStart = lastPeriodStart)
             }
             loadSymptomsForMonth(_uiState.value.currentMonth)
         }
+    }
+
+    /**
+     * Finds the start of the most recent valid cycle using chronological iteration.
+     * Logic: A new cycle only starts if a bleeding block is >= 21 days from the LAST valid start.
+     */
+    private fun calculateValidLastPeriodStart(dates: List<LocalDate>): LocalDate? {
+        if (dates.isEmpty()) return null
+
+        // 1. Group into consecutive blocks
+        val blocks = mutableListOf<MutableList<LocalDate>>()
+        var currentBlock = mutableListOf(dates[0])
+        for (i in 1 until dates.size) {
+            if (ChronoUnit.DAYS.between(dates[i - 1], dates[i]) == 1L) {
+                currentBlock.add(dates[i])
+            } else {
+                blocks.add(currentBlock)
+                currentBlock = mutableListOf(dates[i])
+            }
+        }
+        blocks.add(currentBlock)
+
+        // 2. Identify the true last cycle start using chronological accumulation
+        // Logic requested: Ignore blocks < 21 days from the CURRENT valid start
+        var currentCycleStart: LocalDate = blocks[0].first()
+
+        for (i in 1 until blocks.size) {
+            val nextBlockStart = blocks[i].first()
+            val daysSinceValidStart = ChronoUnit.DAYS.between(currentCycleStart, nextBlockStart)
+
+            if (daysSinceValidStart >= 21) {
+                // It's a new period, update the current cycle tracker
+                currentCycleStart = nextBlockStart
+            }
+            // Else: it's spotting, ignore it and keep currentCycleStart as is
+        }
+
+        return currentCycleStart
     }
 
     private fun loadSymptomsForMonth(month: YearMonth) {
