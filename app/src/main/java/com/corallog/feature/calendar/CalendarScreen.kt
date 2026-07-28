@@ -16,6 +16,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -46,7 +48,7 @@ enum class CyclePhase {
 
 /**
  * Main Calendar screen implementation.
- * Handles display of the interactive calendar and the symptom logging bottom sheet (HU-02).
+ * Handles display of the interactive calendar and the symptom logging inline (HU-02).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -55,8 +57,7 @@ fun CalendarScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val scrollState = rememberScrollState()
-    val sheetState = rememberModalBottomSheetState()
-    var showBottomSheet by remember { mutableStateOf(false) }
+    var isDaySelected by remember { mutableStateOf(false) }
 
     // Dynamic days calculation based on uiState.currentMonth
     val dayStates = remember(uiState.currentMonth) {
@@ -99,7 +100,7 @@ fun CalendarScreen(
                         text = "Coral Log",
                         fontFamily = ManropeFontFamily,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 24.sp,
+                        fontSize = 24.sp, // Restaurado tamaño original
                         color = Primary
                     )
                 },
@@ -107,6 +108,9 @@ fun CalendarScreen(
                     containerColor = Background
                 )
             )
+        },
+        bottomBar = {
+            BottomNavBar(activeTab = "Calendario", onTabSelected = { /* TODO: Navigation */ })
         }
     ) { innerPadding ->
         Column(
@@ -115,54 +119,53 @@ fun CalendarScreen(
                 .fillMaxSize()
                 .background(Background)
                 .verticalScroll(scrollState)
-                .padding(horizontal = 20.dp, vertical = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(40.dp)
+                .padding(horizontal = 20.dp, vertical = 5.dp), // Padding estándar para dar aire
+            verticalArrangement = Arrangement.spacedBy(24.dp) // Espaciado balanceado
         ) {
             CalendarCard(
                 currentMonth = uiState.currentMonth,
-                onMonthChange = { viewModel.onMonthChange(it) },
+                onMonthChange = { 
+                    viewModel.onMonthChange(it)
+                    isDaySelected = false 
+                },
                 dayStates = dayStates,
-                selectedDay = uiState.selectedDate.dayOfMonth,
+                selectedDay = if (isDaySelected) uiState.selectedDate.dayOfMonth else -1,
                 onDayClick = { day ->
                     viewModel.onDateSelected(uiState.currentMonth.atDay(day))
-                    showBottomSheet = true
+                    isDaySelected = true
                 }
             )
 
-            // Legend for phases
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
-                    LegendItem(color = PhaseMenstrual, label = "Menstrual")
-                    LegendItem(color = PhaseFolicular, label = "Folicular")
+            if (!isDaySelected) {
+                // Legend for phases
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
+                        LegendItem(color = PhaseMenstrual, label = "Menstrual")
+                        LegendItem(color = PhaseFolicular, label = "Folicular")
+                    }
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
+                        LegendItem(color = PhaseOvulacion, label = "Ovulación")
+                        LegendItem(color = PhaseLutea, label = "Lútea")
+                    }
                 }
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
-                    LegendItem(color = PhaseOvulacion, label = "Ovulación")
-                    LegendItem(color = PhaseLutea, label = "Lútea")
-                }
-            }
-        }
-
-        if (showBottomSheet) {
-            ModalBottomSheet(
-                onDismissRequest = { showBottomSheet = false },
-                sheetState = sheetState,
-                containerColor = SurfaceContainer
-            ) {
+            } else {
+                // Inline logging section
                 val currentSymptom = uiState.symptoms[uiState.selectedDate.toString()]
-                LoggingSectionContent(
+                LoggingSectionCard(
                     selectedDate = uiState.selectedDate,
                     isBleeding = currentSymptom?.isBleeding ?: false,
                     flowLevel = currentSymptom?.flowLevel ?: 0,
                     crampIntensity = currentSymptom?.crampIntensity ?: 0,
-                    onSave = { bleeding, flow, cramps ->
+                    onUpdate = { bleeding, flow, cramps ->
                         viewModel.onSaveSymptom(uiState.selectedDate, bleeding, flow, cramps)
-                        showBottomSheet = false
                     }
                 )
             }
+            
+            Spacer(modifier = Modifier.weight(1f)) // Empuja el contenido hacia arriba sin dejar hueco al final
         }
     }
 }
@@ -181,7 +184,7 @@ fun CalendarCard(
         colors = CardDefaults.cardColors(containerColor = SurfaceContainerLow)
     ) {
         Column(
-            modifier = Modifier.padding(24.dp),
+            modifier = Modifier.padding(24.dp), // Restaurado padding generoso
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Row(
@@ -212,12 +215,12 @@ fun CalendarCard(
                 }
             }
 
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) { // Restaurado espacio entre filas
                 dayStates.chunked(7).forEach { week ->
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         for (col in 0..6) {
                             val dayState = week.getOrNull(col)
-                            Box(modifier = Modifier.weight(1f).aspectRatio(1f), contentAlignment = Alignment.Center) {
+                            Box(modifier = Modifier.weight(1f).aspectRatio(1f), contentAlignment = Alignment.Center) { // Aspecto 1:1
                                 if (dayState != null) {
                                     val cellBgColor = when (dayState.phase) {
                                         CyclePhase.MENSTRUAL -> PhaseMenstrual
@@ -247,81 +250,111 @@ fun CalendarCard(
 }
 
 @Composable
-fun LoggingSectionContent(
+fun LoggingSectionCard(
     selectedDate: LocalDate,
     isBleeding: Boolean,
     flowLevel: Int,
     crampIntensity: Int,
-    onSave: (Boolean, Int, Int) -> Unit
+    onUpdate: (Boolean, Int, Int) -> Unit
 ) {
-    var bleeding by remember { mutableStateOf(isBleeding) }
-    var flow by remember { mutableIntStateOf(flowLevel) }
-    var cramps by remember { mutableIntStateOf(crampIntensity) }
-
-    Column(
-        modifier = Modifier.fillMaxWidth().padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(24.dp)
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = SurfaceContainer)
     ) {
-        Text(
-            text = "Registro para ${selectedDate.dayOfMonth} de ${selectedDate.month.getDisplayName(TextStyle.FULL, Locale("es"))}",
-            style = MaterialTheme.typography.titleLarge,
-            color = OnSurface,
-            fontFamily = ManropeFontFamily
-        )
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            modifier = Modifier.padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Icon(Icons.Default.WaterDrop, null, tint = ColorPeriodoRed)
-                Text("¿Hubo sangrado?", color = OnSurface)
-            }
-            Switch(checked = bleeding, onCheckedChange = { bleeding = it }, colors = SwitchDefaults.colors(checkedThumbColor = ColorPeriodoRed))
-        }
+            Text(
+                text = "Registro para ${selectedDate.dayOfMonth} de ${selectedDate.month.getDisplayName(TextStyle.FULL, Locale("es"))}",
+                style = MaterialTheme.typography.titleMedium,
+                fontSize = 18.sp,
+                color = OnSurface,
+                fontFamily = ManropeFontFamily
+            )
 
-        if (bleeding) {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Nivel de Flujo", color = OnSurfaceVariant, fontSize = 14.sp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Icon(Icons.Default.WaterDrop, null, tint = ColorPeriodoRed, modifier = Modifier.size(24.dp))
+                    Text("¿Hubo sangrado?", color = OnSurface, fontSize = 16.sp)
+                }
+                Switch(
+                    checked = isBleeding, 
+                    onCheckedChange = { onUpdate(it, flowLevel, crampIntensity) }, 
+                    colors = SwitchDefaults.colors(checkedThumbColor = ColorPeriodoRed)
+                )
+            }
+
+            // Flow Level - Always visible, disabled/grey if not bleeding
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("Nivel de Flujo", color = if (isBleeding) OnSurfaceVariant else OnSurfaceVariant.copy(alpha = 0.4f), fontSize = 14.sp)
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     repeat(3) { i ->
                         val level = i + 1
                         FilterChip(
-                            selected = flow == level,
-                            onClick = { flow = level },
+                            enabled = isBleeding,
+                            selected = flowLevel == level,
+                            onClick = { onUpdate(isBleeding, level, crampIntensity) },
                             label = { Text("Nivel $level") }
                         )
                     }
                 }
             }
 
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Intensidad de Cólicos", color = OnSurfaceVariant, fontSize = 14.sp)
+            // Cramp Intensity - Always visible, disabled/grey if not bleeding
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("Intensidad de Cólicos", color = if (isBleeding) OnSurfaceVariant else OnSurfaceVariant.copy(alpha = 0.4f), fontSize = 14.sp)
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     repeat(3) { i ->
                         val level = i + 1
                         FilterChip(
-                            selected = cramps == level,
-                            onClick = { cramps = level },
+                            enabled = isBleeding,
+                            selected = crampIntensity == level,
+                            onClick = { onUpdate(isBleeding, flowLevel, level) },
                             label = { Text("Nivel $level") }
                         )
                     }
                 }
             }
         }
-
-        Button(
-            onClick = { onSave(bleeding, flow, cramps) },
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(containerColor = Primary)
-        ) {
-            Text("Guardar Registro", color = OnPrimary)
-        }
-        
-        Spacer(modifier = Modifier.height(24.dp))
     }
 }
+
+@Composable
+fun BottomNavBar(activeTab: String, onTabSelected: (String) -> Unit) {
+    NavigationBar(containerColor = SurfaceContainer, tonalElevation = 8.dp) {
+        val navItems = listOf(
+            NavItem("Inicio", Icons.Default.Home),
+            NavItem("Calendario", Icons.Default.CalendarMonth),
+            NavItem("Resumen", Icons.Default.BarChart),
+            NavItem("Ajustes", Icons.Default.Settings)
+        )
+
+        navItems.forEach { item ->
+            val isActive = activeTab == item.label
+            NavigationBarItem(
+                selected = isActive,
+                onClick = { onTabSelected(item.label) },
+                icon = { Icon(item.icon, item.label, modifier = Modifier.size(24.dp)) },
+                label = { Text(item.label, fontFamily = ManropeFontFamily, fontWeight = FontWeight.Bold, fontSize = 11.sp) },
+                colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = OnPrimaryContainer,
+                    selectedTextColor = Primary,
+                    indicatorColor = PrimaryContainer,
+                    unselectedIconColor = OnSurfaceVariant,
+                    unselectedTextColor = OnSurfaceVariant
+                )
+            )
+        }
+    }
+}
+
+data class NavItem(val label: String, val icon: ImageVector)
 
 @Composable
 fun LegendItem(color: Color, label: String) {

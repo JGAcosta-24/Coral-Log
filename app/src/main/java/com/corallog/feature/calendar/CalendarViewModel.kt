@@ -48,14 +48,16 @@ class CalendarViewModel(
         date: LocalDate,
         isBleeding: Boolean,
         flowLevel: Int,
-        crampIntensity: Int
+        crampIntensity: Int,
+        clotLevel: Int = 0
     ) {
         viewModelScope.launch {
             val symptom = SymptomEntity(
                 date = date.toString(),
                 isBleeding = isBleeding,
                 flowLevel = flowLevel,
-                crampIntensity = crampIntensity
+                crampIntensity = crampIntensity,
+                clotLevel = clotLevel
             )
             repository.upsertSymptom(symptom)
             // Reload to reflect changes
