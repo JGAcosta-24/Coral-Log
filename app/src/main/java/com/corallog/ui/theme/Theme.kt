@@ -30,33 +30,13 @@ val LocalPhaseColors = staticCompositionLocalOf<PhaseColors> {
 }
 
 /**
- * Palette for the "Coral" theme.
+ * Base dark color scheme for the application.
+ * Component colors are overridden dynamically in [CoralLogTheme].
  */
-private val CoralPhaseColors = PhaseColors(
-    menstrual = PhaseMenstrualCoral,
-    folicular = PhaseFolicularCoral,
-    ovulacion = PhaseOvulacionCoral,
-    lutea = PhaseLuteaCoral
-)
-
-/**
- * Palette for the "Océano" theme.
- */
-private val OceanPhaseColors = PhaseColors(
-    menstrual = MenstrualOcean,
-    folicular = FolicularOcean,
-    ovulacion = OvulacionOcean,
-    lutea = LuteaOcean
-)
-
-private val DarkColorScheme = darkColorScheme(
-    primary = Primary,
-    onPrimary = OnPrimary,
-    primaryContainer = PrimaryContainer,
-    onPrimaryContainer = OnPrimaryContainer,
+private val BaseDarkColorScheme = darkColorScheme(
+    onPrimary = Color.White,
     secondary = Secondary,
     onSecondary = OnSecondary,
-    secondaryContainer = SecondaryContainer,
     tertiary = Tertiary,
     onTertiary = OnTertiary,
     tertiaryContainer = TertiaryContainer,
@@ -75,27 +55,33 @@ fun CoralLogTheme(
     fontName: String = "ROBOTO",
     content: @Composable () -> Unit
 ) {
-    val colorScheme = DarkColorScheme
-    val view = LocalView.current
+    // 1. Lookup the current theme configuration from AppTheme Enum
+    val currentThemeConfig = AppTheme.entries.find { it.id == themeName } ?: AppTheme.CORAL
 
-    // Selection of phase colors based on theme name
-    val selectedPhaseColors = when (themeName) {
-        "OCEANO" -> OceanPhaseColors
-        else -> CoralPhaseColors
-    }
+    // 2. FORCED SCHEME: Overriding critical Material 3 slots to ensure 
+    // the primary theme color (Green, Blue, or Coral) flows everywhere.
+    val customColorScheme = BaseDarkColorScheme.copy(
+        primary = currentThemeConfig.primaryColor,
+        primaryContainer = currentThemeConfig.primaryColor,
+        onPrimaryContainer = Color.White,
+        secondaryContainer = currentThemeConfig.primaryColor.copy(alpha = 0.25f),
+        onSecondaryContainer = currentThemeConfig.primaryColor
+    )
+    
+    val view = LocalView.current
 
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.surface.toArgb()
-            window.navigationBarColor = colorScheme.surface.toArgb()
+            window.statusBarColor = customColorScheme.surface.toArgb()
+            window.navigationBarColor = customColorScheme.surface.toArgb()
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
         }
     }
 
-    CompositionLocalProvider(LocalPhaseColors provides selectedPhaseColors) {
+    CompositionLocalProvider(LocalPhaseColors provides currentThemeConfig.phaseColors) {
         MaterialTheme(
-            colorScheme = colorScheme,
+            colorScheme = customColorScheme,
             typography = getTypographyForFont(fontName),
             content = content
         )

@@ -40,7 +40,13 @@ val PhaseOvulacionCoral = Color(0xFFFFE082)
 val PhaseLuteaCoral = Color(0xFFB39DDB)
 
 // Paleta Tema "Océano" (Nuevos)
-val MenstrualOcean = Color(0xFF90CAF9)
-val FolicularOcean = Color(0xFF80DEEA)
+val MenstrualOcean = Color(0xFF1565C0) // Azul profundo
+val FolicularOcean = Color(0xFF4DD0E1) // Cian claro
 val OvulacionOcean = Color(0xFFFFF59D)
 val LuteaOcean = Color(0xFFB39DDB)
+
+// Paleta Tema "Bosque"
+val MenstrualForest = Color(0xFF2E7D32) // Verde bosque profundo
+val FolicularForest = Color(0xFFAED581) // Verde claro/hoja
+val OvulacionForest = Color(0xFFFFD54F) // Amarillo sol
+val LuteaForest = Color(0xFFBCAAA4) // Marrón tierra (Ajustado para contraste)

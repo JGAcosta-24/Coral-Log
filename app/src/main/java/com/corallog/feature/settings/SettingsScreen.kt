@@ -89,7 +89,8 @@ private fun ThemeDropdown(
     
     val themeOptions = listOf(
         "CORAL" to stringResource(R.string.theme_coral),
-        "OCEANO" to stringResource(R.string.theme_ocean)
+        "OCEANO" to stringResource(R.string.theme_ocean),
+        "BOSQUE" to stringResource(R.string.theme_forest)
     )
 
     val currentThemeLabel = themeOptions.find { it.first == currentTheme }?.second 

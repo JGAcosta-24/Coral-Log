@@ -4,6 +4,7 @@
     <string name="theme">Theme</string>
     <string name="theme_coral">Coral Theme</string>
     <string name="theme_ocean">Ocean Theme</string>
+    <string name="theme_forest">Forest Theme</string>
     <string name="typography">Typography</string>
     <string name="font_roboto">Roboto (Classic)</string>
     <string name="font_merriweather">Merriweather (Elegant)</string>
