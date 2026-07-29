@@ -1,3 +1,44 @@
 <resources>
     <string name="app_name">Coral Log</string>
+    <string name="settings">Settings</string>
+    <string name="theme">Theme</string>
+    <string name="theme_coral">Coral Theme</string>
+    <string name="theme_ocean">Ocean Theme</string>
+    <string name="theme_forest">Forest Theme</string>
+    <string name="typography">Typography</string>
+    <string name="font_roboto">Roboto (Classic)</string>
+    <string name="font_merriweather">Merriweather (Elegant)</string>
+    <string name="font_nunito">Nunito (Rounded)</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">Home</string>
+    <string name="nav_calendar">Calendar</string>
+    <string name="nav_summary">Summary</string>
+    <string name="nav_settings">Settings</string>
+
+    <!-- Calendar & Logging -->
+    <string name="logging_title">Log for %1$d %2$s</string> <!-- Day, Month -->
+    <string name="bleeding_question">Bleeding occurred?</string>
+    <string name="flow_level">Flow Level</string>
+    <string name="cramp_intensity">Cramp Intensity</string>
+    <string name="clots">Clots</string>
+    <string name="select_option">Select</string>
+
+    <!-- Symptoms Levels -->
+    <string name="level_min">Minimal</string>
+    <string name="level_low">Light</string>
+    <string name="level_med">Moderate</string>
+    <string name="level_high">Heavy</string>
+    <string name="level_max">Abundant</string>
+
+    <!-- Phases -->
+    <string name="phase_menstrual">Menstrual</string>
+    <string name="phase_folicular">Follicular</string>
+    <string name="phase_ovulation">Ovulation</string>
+    <string name="phase_luteal">Luteal</string>
+
+    <!-- Misc -->
+    <string name="prev_month">Previous month</string>
+    <string name="next_month">Next month</string>
+    <string name="today_label">TODAY</string>
 </resources>
