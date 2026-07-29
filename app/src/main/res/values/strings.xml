@@ -13,32 +13,66 @@
     <!-- Navigation -->
     <string name="nav_home">Home</string>
     <string name="nav_calendar">Calendar</string>
-    <string name="nav_summary">Summary</string>
+    <string name="nav_metrics">Summary</string>
     <string name="nav_settings">Settings</string>
-
-    <!-- Calendar & Logging -->
-    <string name="logging_title">Log for %1$d %2$s</string> <!-- Day, Month -->
-    <string name="bleeding_question">Bleeding occurred?</string>
-    <string name="flow_level">Flow Level</string>
-    <string name="cramp_intensity">Cramp Intensity</string>
-    <string name="clots">Clots</string>
-    <string name="select_option">Select</string>
-
-    <!-- Symptoms Levels -->
-    <string name="level_min">Minimal</string>
-    <string name="level_low">Light</string>
-    <string name="level_med">Moderate</string>
-    <string name="level_high">Heavy</string>
-    <string name="level_max">Abundant</string>
 
     <!-- Phases -->
     <string name="phase_menstrual">Menstrual</string>
-    <string name="phase_folicular">Follicular</string>
+    <string name="phase_follicular">Follicular</string>
     <string name="phase_ovulation">Ovulation</string>
     <string name="phase_luteal">Luteal</string>
+    <string name="phase_none">None</string>
 
-    <!-- Misc -->
-    <string name="prev_month">Previous month</string>
-    <string name="next_month">Next month</string>
+    <!-- Metrics Screen (Sprint 3) -->
+    <string name="metrics_title">Health Analysis</string>
+    <string name="metrics_subtitle">Your Historical Patterns</string>
+    <string name="cycle_duration_title">Cycle Duration</string>
+    <string name="cycle_duration_value">%1$d days</string>
+    <string name="cycle_duration_desc">Average based on your regular cycles (21-40 days).</string>
+    <string name="flow_level_title">Flow Level</string>
+    <string name="flow_level_desc">Predominant tendency of the last 6 months.</string>
+    <string name="clots_title">Clots</string>
+    <string name="clots_desc">Predominant tendency of clots in the last 6 months.</string>
+    <string name="cramps_intensity_title">Cramps Intensity</string>
+    <string name="cramps_intensity_desc">Average pain recorded only during your period days.</string>
+    <string name="insufficient_data_title">Insufficient Data</string>
+    <string name="insufficient_data_desc">We need at least 2 valid cycles (regular duration) recorded to show these metrics.</string>
+    <string name="go_to_calendar">Go to Calendar</string>
+
+    <!-- Labels and Categories -->
+    <string name="flow_min">Minimum</string>
+    <string name="flow_light">Light</string>
+    <string name="flow_mod">Moderate</string>
+    <string name="flow_high">High</string>
+    <string name="flow_heavy">Abundant</string>
+
+    <string name="clot_light">Light</string>
+    <string name="clot_mod">Moderate</string>
+    <string name="clot_high">High</string>
+
+    <string name="cramp_light">Light</string>
+    <string name="cramp_mod">Moderate</string>
+    <string name="cramp_strong">Strong</string>
+    <string name="cramp_intense">Intense</string>
+    <string name="cramp_very_intense">Very Intense</string>
+
+    <string name="unknown">Unknown</string>
+
+    <!-- Calendar -->
+    <string name="day_mon">Mon</string>
+    <string name="day_tue">Tue</string>
+    <string name="day_wed">Wed</string>
+    <string name="day_thu">Thu</string>
+    <string name="day_fri">Fri</string>
+    <string name="day_sat">Sat</string>
+    <string name="day_sun">Sun</string>
+    <string name="prev_month">Previous Month</string>
+    <string name="next_month">Next Month</string>
     <string name="today_label">TODAY</string>
+    <string name="select_option">Select</string>
+    <string name="bleeding_question">Bleeding recorded?</string>
+    <string name="flow_label">Flow</string>
+    <string name="cramps_label">Cramps</string>
+    <string name="clots_label">Clots</string>
+    <string name="registration_for">Log for %1$d %2$s</string>
 </resources>

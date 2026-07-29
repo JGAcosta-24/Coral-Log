@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Coral Log</string>
     <string name="settings">Ajustes</string>
@@ -14,32 +13,66 @@
     <!-- Navigation -->
     <string name="nav_home">Inicio</string>
     <string name="nav_calendar">Calendario</string>
-    <string name="nav_summary">Resumen</string>
+    <string name="nav_metrics">Resumen</string>
     <string name="nav_settings">Ajustes</string>
-
-    <!-- Calendar & Logging -->
-    <string name="logging_title">Registro para %1$d de %2$s</string> <!-- Day, Month -->
-    <string name="bleeding_question">¿Hubo sangrado?</string>
-    <string name="flow_level">Nivel de Flujo</string>
-    <string name="cramp_intensity">Intensidad de Cólicos</string>
-    <string name="clots">Coágulos</string>
-    <string name="select_option">Seleccionar</string>
-
-    <!-- Symptoms Levels -->
-    <string name="level_min">Mínimo</string>
-    <string name="level_low">Leve</string>
-    <string name="level_med">Moderado</string>
-    <string name="level_high">Alto</string>
-    <string name="level_max">Abundante</string>
 
     <!-- Phases -->
     <string name="phase_menstrual">Menstrual</string>
-    <string name="phase_folicular">Folicular</string>
+    <string name="phase_follicular">Folicular</string>
     <string name="phase_ovulation">Ovulación</string>
     <string name="phase_luteal">Lútea</string>
+    <string name="phase_none">Ninguna</string>
 
-    <!-- Misc -->
+    <!-- Metrics Screen (Sprint 3) -->
+    <string name="metrics_title">Análisis de Salud</string>
+    <string name="metrics_subtitle">Tus Patrones Históricos</string>
+    <string name="cycle_duration_title">Duración del Ciclo</string>
+    <string name="cycle_duration_value">%1$d días</string>
+    <string name="cycle_duration_desc">Promedio basado en tus ciclos regulares (21-40 días).</string>
+    <string name="flow_level_title">Nivel de Flujo</string>
+    <string name="flow_level_desc">Tendencia predominante de los últimos 6 meses.</string>
+    <string name="clots_title">Coágulos</string>
+    <string name="clots_desc">Tendencia predominante de coágulos en los últimos 6 meses.</string>
+    <string name="cramps_intensity_title">Intensidad de Cólicos</string>
+    <string name="cramps_intensity_desc">Promedio de dolor registrado solo durante tus días de periodo.</string>
+    <string name="insufficient_data_title">Datos Insuficientes</string>
+    <string name="insufficient_data_desc">Necesitamos al menos 2 ciclos válidos (duración regular) registrados para mostrar estas métricas.</string>
+    <string name="go_to_calendar">Ir al Calendario</string>
+
+    <!-- Labels and Categories -->
+    <string name="flow_min">Mínimo</string>
+    <string name="flow_light">Leve</string>
+    <string name="flow_mod">Moderado</string>
+    <string name="flow_high">Alto</string>
+    <string name="flow_heavy">Abundante</string>
+
+    <string name="clot_light">Leve</string>
+    <string name="clot_mod">Moderado</string>
+    <string name="clot_high">Alto</string>
+
+    <string name="cramp_light">Leve</string>
+    <string name="cramp_mod">Moderado</string>
+    <string name="cramp_strong">Fuerte</string>
+    <string name="cramp_intense">Intenso</string>
+    <string name="cramp_very_intense">Muy Intenso</string>
+
+    <string name="unknown">Desconocido</string>
+
+    <!-- Calendar -->
+    <string name="day_mon">lun</string>
+    <string name="day_tue">mar</string>
+    <string name="day_wed">mié</string>
+    <string name="day_thu">jue</string>
+    <string name="day_fri">vie</string>
+    <string name="day_sat">sáb</string>
+    <string name="day_sun">dom</string>
     <string name="prev_month">Mes anterior</string>
     <string name="next_month">Mes siguiente</string>
     <string name="today_label">HOY</string>
+    <string name="select_option">Seleccionar</string>
+    <string name="bleeding_question">¿Hubo sangrado?</string>
+    <string name="flow_label">Flujo</string>
+    <string name="cramps_label">Cólicos</string>
+    <string name="clots_label">Coágulos</string>
+    <string name="registration_for">Registro para %1$d de %2$s</string>
 </resources>
