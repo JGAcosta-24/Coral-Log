@@ -2,8 +2,10 @@ package com.corallog.di
 
 import androidx.room.Room
 import com.corallog.data.AppDatabase
+import com.corallog.data.UserPreferencesRepository
 import com.corallog.feature.calendar.CalendarRepository
 import com.corallog.feature.calendar.CalendarViewModel
+import com.corallog.feature.settings.SettingsViewModel
 import org.koin.android.ext.koin.androidContext
 import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.dsl.module
@@ -28,6 +30,7 @@ val dataModule = module {
 
     // Repositories
     single { CalendarRepository(get(), get()) }
+    single { UserPreferencesRepository(androidContext()) }
 }
 
 /**
@@ -35,6 +38,7 @@ val dataModule = module {
  */
 val viewModelModule = module {
     viewModel { CalendarViewModel(get()) }
+    viewModel { SettingsViewModel(get()) }
 }
 
 /**

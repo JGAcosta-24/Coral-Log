@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Coral Log</string>
+    <string name="settings">Ajustes</string>
+    <string name="theme">Tema</string>
+    <string name="theme_coral">Tema Coral</string>
+    <string name="theme_ocean">Tema Océano</string>
+    <string name="theme_forest">Tema Bosque</string>
+    <string name="typography">Tipografía</string>
+    <string name="font_roboto">Roboto (Clásica)</string>
+    <string name="font_merriweather">Merriweather (Elegante)</string>
+    <string name="font_nunito">Nunito (Redondeada)</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">Inicio</string>
+    <string name="nav_calendar">Calendario</string>
+    <string name="nav_summary">Resumen</string>
+    <string name="nav_settings">Ajustes</string>
+
+    <!-- Calendar & Logging -->
+    <string name="logging_title">Registro para %1$d de %2$s</string> <!-- Day, Month -->
+    <string name="bleeding_question">¿Hubo sangrado?</string>
+    <string name="flow_level">Nivel de Flujo</string>
+    <string name="cramp_intensity">Intensidad de Cólicos</string>
+    <string name="clots">Coágulos</string>
+    <string name="select_option">Seleccionar</string>
+
+    <!-- Symptoms Levels -->
+    <string name="level_min">Mínimo</string>
+    <string name="level_low">Leve</string>
+    <string name="level_med">Moderado</string>
+    <string name="level_high">Alto</string>
+    <string name="level_max">Abundante</string>
+
+    <!-- Phases -->
+    <string name="phase_menstrual">Menstrual</string>
+    <string name="phase_folicular">Folicular</string>
+    <string name="phase_ovulation">Ovulación</string>
+    <string name="phase_luteal">Lútea</string>
+
+    <!-- Misc -->
+    <string name="prev_month">Mes anterior</string>
+    <string name="next_month">Mes siguiente</string>
+    <string name="today_label">HOY</string>
+</resources>
