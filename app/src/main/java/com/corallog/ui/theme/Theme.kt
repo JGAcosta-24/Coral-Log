@@ -72,6 +72,7 @@ private val DarkColorScheme = darkColorScheme(
 @Composable
 fun CoralLogTheme(
     themeName: String = "CORAL",
+    fontName: String = "ROBOTO",
     content: @Composable () -> Unit
 ) {
     val colorScheme = DarkColorScheme
@@ -95,7 +96,7 @@ fun CoralLogTheme(
     CompositionLocalProvider(LocalPhaseColors provides selectedPhaseColors) {
         MaterialTheme(
             colorScheme = colorScheme,
-            typography = Typography,
+            typography = getTypographyForFont(fontName),
             content = content
         )
     }

@@ -12,7 +12,7 @@ import org.koin.androidx.compose.koinViewModel
 
 /**
  * Settings Screen implementation.
- * Allows user to toggle between different visual themes using a dropdown.
+ * Allows user to toggle between themes and font families.
  */
 @Composable
 fun SettingsScreen(
@@ -31,7 +31,9 @@ fun SettingsScreen(
             is SettingsUiState.Success -> {
                 SettingsContent(
                     currentTheme = state.currentTheme,
-                    onThemeSelected = { viewModel.updateTheme(it) }
+                    currentFont = state.currentFont,
+                    onThemeSelected = { viewModel.updateTheme(it) },
+                    onFontSelected = { viewModel.updateFont(it) }
                 )
             }
         }
@@ -41,6 +43,45 @@ fun SettingsScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SettingsContent(
+    currentTheme: String,
+    currentFont: String,
+    onThemeSelected: (String) -> Unit,
+    onFontSelected: (String) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(24.dp)
+    ) {
+        Text(
+            text = stringResource(R.string.settings),
+            style = MaterialTheme.typography.headlineMedium
+        )
+
+        // Theme Selector
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                text = stringResource(R.string.theme),
+                style = MaterialTheme.typography.titleMedium
+            )
+            ThemeDropdown(currentTheme, onThemeSelected)
+        }
+
+        // Typography Selector
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                text = stringResource(R.string.typography),
+                style = MaterialTheme.typography.titleMedium
+            )
+            FontDropdown(currentFont, onFontSelected)
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ThemeDropdown(
     currentTheme: String,
     onThemeSelected: (String) -> Unit
 ) {
@@ -54,52 +95,80 @@ private fun SettingsContent(
     val currentThemeLabel = themeOptions.find { it.first == currentTheme }?.second 
         ?: stringResource(R.string.theme_coral)
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded },
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Text(
-            text = stringResource(R.string.settings),
-            style = MaterialTheme.typography.headlineMedium
+        OutlinedTextField(
+            readOnly = true,
+            value = currentThemeLabel,
+            onValueChange = { },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+            modifier = Modifier.menuAnchor().fillMaxWidth()
         )
 
-        Text(
-            text = stringResource(R.string.theme),
-            style = MaterialTheme.typography.titleMedium
-        )
-
-        ExposedDropdownMenuBox(
+        ExposedDropdownMenu(
             expanded = expanded,
-            onExpandedChange = { expanded = !expanded },
-            modifier = Modifier.fillMaxWidth()
+            onDismissRequest = { expanded = false }
         ) {
-            OutlinedTextField(
-                readOnly = true,
-                value = currentThemeLabel,
-                onValueChange = { },
-                label = { Text(stringResource(R.string.theme)) },
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
-                modifier = Modifier
-                    .menuAnchor()
-                    .fillMaxWidth()
-            )
+            themeOptions.forEach { (value, label) ->
+                DropdownMenuItem(
+                    text = { Text(label) },
+                    onClick = {
+                        onThemeSelected(value)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
 
-            ExposedDropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false }
-            ) {
-                themeOptions.forEach { (value, label) ->
-                    DropdownMenuItem(
-                        text = { Text(label) },
-                        onClick = {
-                            onThemeSelected(value)
-                            expanded = false
-                        }
-                    )
-                }
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun FontDropdown(
+    currentFont: String,
+    onFontSelected: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    
+    val fontOptions = listOf(
+        "ROBOTO" to stringResource(R.string.font_roboto),
+        "MERRIWEATHER" to stringResource(R.string.font_merriweather),
+        "NUNITO" to stringResource(R.string.font_nunito)
+    )
+
+    val currentFontLabel = fontOptions.find { it.first == currentFont }?.second 
+        ?: stringResource(R.string.font_roboto)
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded },
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        OutlinedTextField(
+            readOnly = true,
+            value = currentFontLabel,
+            onValueChange = { },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+            modifier = Modifier.menuAnchor().fillMaxWidth()
+        )
+
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            fontOptions.forEach { (value, label) ->
+                DropdownMenuItem(
+                    text = { Text(label) },
+                    onClick = {
+                        onFontSelected(value)
+                        expanded = false
+                    }
+                )
             }
         }
     }

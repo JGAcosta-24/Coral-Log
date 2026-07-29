@@ -21,6 +21,7 @@ class UserPreferencesRepository(private val context: Context) {
 
     private object PreferencesKeys {
         val THEME_MODE = stringPreferencesKey("theme_mode")
+        val FONT_FAMILY = stringPreferencesKey("font_family")
     }
 
     /**
@@ -32,13 +33,28 @@ class UserPreferencesRepository(private val context: Context) {
     }
 
     /**
+     * Flow that emits the current user font choice.
+     * Defaults to "ROBOTO" if no value is stored.
+     */
+    val userFontFlow: Flow<String> = context.dataStore.data.map { preferences ->
+        preferences[PreferencesKeys.FONT_FAMILY] ?: "ROBOTO"
+    }
+
+    /**
      * Updates the user theme preference asynchronously.
-     * 
-     * @param themeName The name of the theme to save (e.g., "CORAL", "DARK", etc.).
      */
     suspend fun saveTheme(themeName: String) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.THEME_MODE] = themeName
+        }
+    }
+
+    /**
+     * Updates the user font preference asynchronously.
+     */
+    suspend fun saveFont(fontName: String) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.FONT_FAMILY] = fontName
         }
     }
 }

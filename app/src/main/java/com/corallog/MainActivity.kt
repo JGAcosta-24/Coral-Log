@@ -13,8 +13,8 @@ import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.corallog.data.UserPreferencesRepository
 import com.corallog.feature.calendar.CalendarScreen
@@ -35,18 +35,20 @@ class MainActivity : ComponentActivity() {
         setContent {
             val currentTheme by prefsRepository.userThemeFlow
                 .collectAsStateWithLifecycle(initialValue = "CORAL")
+            val currentFont by prefsRepository.userFontFlow
+                .collectAsStateWithLifecycle(initialValue = "ROBOTO")
 
-            CoralLogTheme(themeName = currentTheme) {
+            CoralLogTheme(themeName = currentTheme, fontName = currentFont) {
                 var selectedTab by remember { mutableStateOf("Calendario") }
 
                 Scaffold(
                     bottomBar = {
                         NavigationBar(containerColor = SurfaceContainer, tonalElevation = 8.dp) {
                             val navItems = listOf(
-                                Triple("Inicio", Icons.Default.Home, "Inicio"),
-                                Triple("Calendario", Icons.Default.CalendarMonth, "Calendario"),
-                                Triple("Resumen", Icons.Default.BarChart, "Resumen"),
-                                Triple("Ajustes", Icons.Default.Settings, "Ajustes")
+                                Triple(stringResource(R.string.nav_home), Icons.Default.Home, "Inicio"),
+                                Triple(stringResource(R.string.nav_calendar), Icons.Default.CalendarMonth, "Calendario"),
+                                Triple(stringResource(R.string.nav_summary), Icons.Default.BarChart, "Resumen"),
+                                Triple(stringResource(R.string.nav_settings), Icons.Default.Settings, "Ajustes")
                             )
 
                             navItems.forEach { (label, icon, route) ->
@@ -54,7 +56,12 @@ class MainActivity : ComponentActivity() {
                                     selected = selectedTab == route,
                                     onClick = { selectedTab = route },
                                     icon = { Icon(icon, label) },
-                                    label = { Text(label, fontSize = 11.sp) }
+                                    label = { 
+                                        Text(
+                                            text = label, 
+                                            style = MaterialTheme.typography.labelSmall 
+                                        ) 
+                                    }
                                 )
                             }
                         }
@@ -71,7 +78,10 @@ class MainActivity : ComponentActivity() {
                             "Ajustes" -> SettingsScreen()
                             else -> {
                                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
-                                    Text("Próximamente: $selectedTab")
+                                    Text(
+                                        text = "Próximamente: $selectedTab",
+                                        style = MaterialTheme.typography.bodyLarge
+                                    )
                                 }
                             }
                         }

@@ -5,5 +5,8 @@ package com.corallog.feature.settings
  */
 sealed interface SettingsUiState {
     data object Loading : SettingsUiState
-    data class Success(val currentTheme: String) : SettingsUiState
+    data class Success(
+        val currentTheme: String,
+        val currentFont: String
+    ) : SettingsUiState
 }
