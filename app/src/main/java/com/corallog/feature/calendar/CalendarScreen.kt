@@ -20,10 +20,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.corallog.R
+import com.corallog.data.CyclePhase
 import com.corallog.ui.theme.*
 import java.time.LocalDate
 import java.time.YearMonth
@@ -40,13 +43,6 @@ data class DayState(
     val phase: CyclePhase,
     val isToday: Boolean = false
 )
-
-/**
- * Enumeration of menstrual cycle phases.
- */
-enum class CyclePhase {
-    MENSTRUAL, FOLICULAR, OVULACION, LUTEA, NONE
-}
 
 /**
  * Main Calendar screen implementation.
@@ -92,98 +88,89 @@ fun CalendarScreen(
         daysList
     }
 
-    Scaffold(
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = {
-                    Text(
-                        text = "Coral Log",
-                        fontFamily = ManropeFontFamily,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 24.sp,
-                        color = Primary
-                    )
-                },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = Background
-                )
-            )
-        },
-        bottomBar = {
-            BottomNavBar(activeTab = "Calendario", onTabSelected = { /* TODO: Navigation */ })
-        }
-    ) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .padding(innerPadding)
-                .fillMaxSize()
-                .background(Background)
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null
-                ) {
-                    isDaySelected = false
-                }
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(scrollState)
-                    .padding(horizontal = 20.dp, vertical = 5.dp),
-                verticalArrangement = Arrangement.spacedBy(24.dp)
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Background)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
             ) {
-                CalendarCard(
-                    currentMonth = uiState.currentMonth,
-                    onMonthChange = { 
-                        viewModel.onMonthChange(it)
-                        isDaySelected = false 
-                    },
-                    dayStates = dayStates,
-                    selectedDay = if (isDaySelected) uiState.selectedDate.dayOfMonth else -1,
-                    onDayClick = { day ->
-                        val clickedDate = uiState.currentMonth.atDay(day)
-                        if (isDaySelected && uiState.selectedDate == clickedDate) {
-                            // Toggle off if clicking the same day
-                            isDaySelected = false
-                        } else {
-                            viewModel.onDateSelected(clickedDate)
-                            isDaySelected = true
-                        }
+                isDaySelected = false
+            }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(scrollState)
+                .padding(horizontal = 20.dp, vertical = 5.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp)
+        ) {
+            // Re-adding the header that was in the TopAppBar before, but as part of the content
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = stringResource(R.string.app_name),
+                    fontFamily = ManropeFontFamily,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 24.sp,
+                    color = Primary
+                )
+            }
+
+            CalendarCard(
+                currentMonth = uiState.currentMonth,
+                onMonthChange = { 
+                    viewModel.onMonthChange(it)
+                    isDaySelected = false 
+                },
+                dayStates = dayStates,
+                selectedDay = if (isDaySelected) uiState.selectedDate.dayOfMonth else -1,
+                onDayClick = { day ->
+                    val clickedDate = uiState.currentMonth.atDay(day)
+                    if (isDaySelected && uiState.selectedDate == clickedDate) {
+                        // Toggle off if clicking the same day
+                        isDaySelected = false
+                    } else {
+                        viewModel.onDateSelected(clickedDate)
+                        isDaySelected = true
+                    }
+                }
+            )
+
+            if (!isDaySelected) {
+                // Legend for phases
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
+                        LegendItem(color = PhaseMenstrual, label = stringResource(R.string.phase_menstrual))
+                        LegendItem(color = PhaseFolicular, label = stringResource(R.string.phase_follicular))
+                    }
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
+                        LegendItem(color = PhaseOvulacion, label = stringResource(R.string.phase_ovulation))
+                        LegendItem(color = PhaseLutea, label = stringResource(R.string.phase_luteal))
+                    }
+                }
+            } else {
+                // Inline logging section (HU-02 updated)
+                val currentSymptom = uiState.symptoms[uiState.selectedDate.toString()]
+                LoggingSectionCard(
+                    selectedDate = uiState.selectedDate,
+                    isBleeding = currentSymptom?.isBleeding ?: false,
+                    flowLevel = currentSymptom?.flowLevel ?: 0,
+                    crampIntensity = currentSymptom?.crampIntensity ?: 0,
+                    clotLevel = currentSymptom?.clotLevel ?: 0,
+                    onUpdate = { bleeding, flow, cramps, clots ->
+                        viewModel.onSaveSymptom(uiState.selectedDate, bleeding, flow, cramps, clots)
                     }
                 )
-
-                if (!isDaySelected) {
-                    // Legend for phases
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
-                            LegendItem(color = PhaseMenstrual, label = "Menstrual")
-                            LegendItem(color = PhaseFolicular, label = "Folicular")
-                        }
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
-                            LegendItem(color = PhaseOvulacion, label = "Ovulación")
-                            LegendItem(color = PhaseLutea, label = "Lútea")
-                        }
-                    }
-                } else {
-                    // Inline logging section (HU-02 updated)
-                    val currentSymptom = uiState.symptoms[uiState.selectedDate.toString()]
-                    LoggingSectionCard(
-                        selectedDate = uiState.selectedDate,
-                        isBleeding = currentSymptom?.isBleeding ?: false,
-                        flowLevel = currentSymptom?.flowLevel ?: 0,
-                        crampIntensity = currentSymptom?.crampIntensity ?: 0,
-                        clotLevel = currentSymptom?.clotLevel ?: 0,
-                        onUpdate = { bleeding, flow, cramps, clots ->
-                            viewModel.onSaveSymptom(uiState.selectedDate, bleeding, flow, cramps, clots)
-                        }
-                    )
-                }
-                
-                Spacer(modifier = Modifier.weight(1f))
             }
+            
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }
@@ -233,22 +220,30 @@ fun CalendarCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = { onMonthChange(currentMonth.minusMonths(1)) }) {
-                    Icon(Icons.Default.ChevronLeft, "Mes anterior", tint = OnSurface)
+                    Icon(Icons.Default.ChevronLeft, stringResource(R.string.prev_month), tint = OnSurface)
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Box(modifier = Modifier.background(SurfaceContainerHigh, CircleShape).padding(horizontal = 16.dp, vertical = 4.dp)) {
-                        Text(text = currentMonth.month.getDisplayName(TextStyle.FULL, Locale("es")), color = OnSurface, fontWeight = FontWeight.Medium, fontSize = 20.sp)
+                        Text(text = currentMonth.month.getDisplayName(TextStyle.FULL, Locale.getDefault()), color = OnSurface, fontWeight = FontWeight.Medium, fontSize = 20.sp)
                     }
                     Text(text = currentMonth.year.toString(), color = OnSurfaceVariant, fontSize = 20.sp)
                 }
 
                 IconButton(onClick = { onMonthChange(currentMonth.plusMonths(1)) }) {
-                    Icon(Icons.Default.ChevronRight, "Mes siguiente", tint = OnSurface)
+                    Icon(Icons.Default.ChevronRight, stringResource(R.string.next_month), tint = OnSurface)
                 }
             }
 
-            val weekDays = listOf("lun", "mar", "mié", "jue", "vie", "sáb", "dom")
+            val weekDays = listOf(
+                stringResource(R.string.day_mon),
+                stringResource(R.string.day_tue),
+                stringResource(R.string.day_wed),
+                stringResource(R.string.day_thu),
+                stringResource(R.string.day_fri),
+                stringResource(R.string.day_sat),
+                stringResource(R.string.day_sun)
+            )
             Row(modifier = Modifier.fillMaxWidth()) {
                 weekDays.forEach { dayName ->
                     Text(text = dayName, modifier = Modifier.weight(1f), textAlign = TextAlign.Center, color = OnSurfaceVariant, fontSize = 11.sp, fontWeight = FontWeight.Bold)
@@ -299,8 +294,18 @@ fun LoggingSectionCard(
     clotLevel: Int,
     onUpdate: (Boolean, Int, Int, Int) -> Unit
 ) {
-    val flowOptions = listOf("Mínimo", "Leve", "Moderado", "Alto", "Abundante")
-    val clotOptions = listOf("Leve", "Moderado", "Alto")
+    val flowOptions = listOf(
+        stringResource(R.string.flow_min),
+        stringResource(R.string.flow_light),
+        stringResource(R.string.flow_mod),
+        stringResource(R.string.flow_high),
+        stringResource(R.string.flow_heavy)
+    )
+    val clotOptions = listOf(
+        stringResource(R.string.clot_light),
+        stringResource(R.string.clot_mod),
+        stringResource(R.string.clot_high)
+    )
 
     Card(
         modifier = Modifier
@@ -317,7 +322,11 @@ fun LoggingSectionCard(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
-                text = "Registro para ${selectedDate.dayOfMonth} de ${selectedDate.month.getDisplayName(TextStyle.FULL, Locale("es"))}",
+                text = stringResource(
+                    R.string.registration_for,
+                    selectedDate.dayOfMonth,
+                    selectedDate.month.getDisplayName(TextStyle.FULL, Locale.getDefault())
+                ),
                 style = MaterialTheme.typography.titleMedium,
                 fontSize = 18.sp,
                 color = OnSurface,
@@ -330,39 +339,39 @@ fun LoggingSectionCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Checkbox(
-                    checked = isBleeding,
-                    onCheckedChange = { onUpdate(it, flowLevel, crampIntensity, clotLevel) },
-                    colors = CheckboxDefaults.colors(checkedColor = ColorPeriodoRed)
+                    Checkbox(
+                        checked = isBleeding,
+                        onCheckedChange = { onUpdate(it, flowLevel, crampIntensity, clotLevel) },
+                        colors = CheckboxDefaults.colors(checkedColor = ColorPeriodoRed)
+                    )
+                    Icon(Icons.Default.WaterDrop, null, tint = ColorPeriodoRed, modifier = Modifier.size(24.dp))
+                    Text(stringResource(R.string.bleeding_question), color = OnSurface, fontSize = 16.sp)
+                }
+
+                // Dropdown Symptom Selectors
+                SymptomDropdownRow(
+                    label = stringResource(R.string.flow_label),
+                    options = flowOptions,
+                    selectedIndex = flowLevel - 1,
+                    enabled = isBleeding,
+                    onSelectionChange = { index -> onUpdate(isBleeding, index + 1, crampIntensity, clotLevel) }
                 )
-                Icon(Icons.Default.WaterDrop, null, tint = ColorPeriodoRed, modifier = Modifier.size(24.dp))
-                Text("¿Hubo sangrado?", color = OnSurface, fontSize = 16.sp)
-            }
 
-            // Dropdown Symptom Selectors
-            SymptomDropdownRow(
-                label = "Flujo",
-                options = flowOptions,
-                selectedIndex = flowLevel - 1,
-                enabled = isBleeding,
-                onSelectionChange = { index -> onUpdate(isBleeding, index + 1, crampIntensity, clotLevel) }
-            )
+                SymptomDropdownRow(
+                    label = stringResource(R.string.cramps_label),
+                    options = flowOptions,
+                    selectedIndex = crampIntensity - 1,
+                    enabled = isBleeding,
+                    onSelectionChange = { index -> onUpdate(isBleeding, flowLevel, index + 1, clotLevel) }
+                )
 
-            SymptomDropdownRow(
-                label = "Cólicos",
-                options = flowOptions,
-                selectedIndex = crampIntensity - 1,
-                enabled = isBleeding,
-                onSelectionChange = { index -> onUpdate(isBleeding, flowLevel, index + 1, clotLevel) }
-            )
-
-            SymptomDropdownRow(
-                label = "Coágulos",
-                options = clotOptions,
-                selectedIndex = clotLevel - 1,
-                enabled = isBleeding,
-                onSelectionChange = { index -> onUpdate(isBleeding, flowLevel, crampIntensity, index + 1) }
-            )
+                SymptomDropdownRow(
+                    label = stringResource(R.string.clots_label),
+                    options = clotOptions,
+                    selectedIndex = clotLevel - 1,
+                    enabled = isBleeding,
+                    onSelectionChange = { index -> onUpdate(isBleeding, flowLevel, crampIntensity, index + 1) }
+                )
         }
     }
 }
@@ -397,7 +406,7 @@ fun SymptomDropdownRow(
         ) {
             TextField(
                 readOnly = true,
-                value = if (selectedIndex >= 0) options[selectedIndex] else "Seleccionar",
+                value = if (selectedIndex >= 0) options[selectedIndex] else stringResource(R.string.select_option),
                 onValueChange = { },
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                 colors = TextFieldDefaults.colors(
@@ -432,37 +441,6 @@ fun SymptomDropdownRow(
         }
     }
 }
-
-@Composable
-fun BottomNavBar(activeTab: String, onTabSelected: (String) -> Unit) {
-    NavigationBar(containerColor = SurfaceContainer, tonalElevation = 8.dp) {
-        val navItems = listOf(
-            NavItem("Inicio", Icons.Default.Home),
-            NavItem("Calendario", Icons.Default.CalendarMonth),
-            NavItem("Resumen", Icons.Default.BarChart),
-            NavItem("Ajustes", Icons.Default.Settings)
-        )
-
-        navItems.forEach { item ->
-            val isActive = activeTab == item.label
-            NavigationBarItem(
-                selected = isActive,
-                onClick = { onTabSelected(item.label) },
-                icon = { Icon(item.icon, item.label, modifier = Modifier.size(24.dp)) },
-                label = { Text(item.label, fontFamily = ManropeFontFamily, fontWeight = FontWeight.Bold, fontSize = 11.sp) },
-                colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = OnPrimaryContainer,
-                    selectedTextColor = Primary,
-                    indicatorColor = PrimaryContainer,
-                    unselectedIconColor = OnSurfaceVariant,
-                    unselectedTextColor = OnSurfaceVariant
-                )
-            )
-        }
-    }
-}
-
-data class NavItem(val label: String, val icon: ImageVector)
 
 @Composable
 fun LegendItem(color: Color, label: String) {

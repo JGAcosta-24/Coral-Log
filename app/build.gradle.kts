@@ -54,6 +54,9 @@ dependencies {
     implementation(libs.koin.android)
     implementation(libs.koin.compose)
 
+    // Navigation
+    implementation(libs.androidx.navigation.compose)
+
     implementation("androidx.compose.ui:ui-text-google-fonts:1.6.1")
     implementation("androidx.compose.material:material-icons-extended")
 
