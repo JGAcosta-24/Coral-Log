@@ -92,98 +92,75 @@ fun CalendarScreen(
         daysList
     }
 
-    Scaffold(
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = {
-                    Text(
-                        text = "Coral Log",
-                        fontFamily = ManropeFontFamily,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 24.sp,
-                        color = Primary
-                    )
-                },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = Background
-                )
-            )
-        },
-        bottomBar = {
-            BottomNavBar(activeTab = "Calendario", onTabSelected = { /* TODO: Navigation */ })
-        }
-    ) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .padding(innerPadding)
-                .fillMaxSize()
-                .background(Background)
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null
-                ) {
-                    isDaySelected = false
-                }
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(scrollState)
-                    .padding(horizontal = 20.dp, vertical = 5.dp),
-                verticalArrangement = Arrangement.spacedBy(24.dp)
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Background)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
             ) {
-                CalendarCard(
-                    currentMonth = uiState.currentMonth,
-                    onMonthChange = { 
-                        viewModel.onMonthChange(it)
-                        isDaySelected = false 
-                    },
-                    dayStates = dayStates,
-                    selectedDay = if (isDaySelected) uiState.selectedDate.dayOfMonth else -1,
-                    onDayClick = { day ->
-                        val clickedDate = uiState.currentMonth.atDay(day)
-                        if (isDaySelected && uiState.selectedDate == clickedDate) {
-                            // Toggle off if clicking the same day
-                            isDaySelected = false
-                        } else {
-                            viewModel.onDateSelected(clickedDate)
-                            isDaySelected = true
-                        }
+                isDaySelected = false
+            }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(scrollState)
+                .padding(horizontal = 20.dp, vertical = 5.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp)
+        ) {
+            CalendarCard(
+                currentMonth = uiState.currentMonth,
+                onMonthChange = { 
+                    viewModel.onMonthChange(it)
+                    isDaySelected = false 
+                },
+                dayStates = dayStates,
+                selectedDay = if (isDaySelected) uiState.selectedDate.dayOfMonth else -1,
+                onDayClick = { day ->
+                    val clickedDate = uiState.currentMonth.atDay(day)
+                    if (isDaySelected && uiState.selectedDate == clickedDate) {
+                        // Toggle off if clicking the same day
+                        isDaySelected = false
+                    } else {
+                        viewModel.onDateSelected(clickedDate)
+                        isDaySelected = true
+                    }
+                }
+            )
+
+            if (!isDaySelected) {
+                // Legend for phases
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
+                        LegendItem(color = LocalPhaseColors.current.menstrual, label = "Menstrual")
+                        LegendItem(color = LocalPhaseColors.current.folicular, label = "Folicular")
+                    }
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
+                        LegendItem(color = LocalPhaseColors.current.ovulacion, label = "Ovulación")
+                        LegendItem(color = LocalPhaseColors.current.lutea, label = "Lútea")
+                    }
+                }
+            } else {
+                // Inline logging section (HU-02 updated)
+                val currentSymptom = uiState.symptoms[uiState.selectedDate.toString()]
+                LoggingSectionCard(
+                    selectedDate = uiState.selectedDate,
+                    isBleeding = currentSymptom?.isBleeding ?: false,
+                    flowLevel = currentSymptom?.flowLevel ?: 0,
+                    crampIntensity = currentSymptom?.crampIntensity ?: 0,
+                    clotLevel = currentSymptom?.clotLevel ?: 0,
+                    onUpdate = { bleeding, flow, cramps, clots ->
+                        viewModel.onSaveSymptom(uiState.selectedDate, bleeding, flow, cramps, clots)
                     }
                 )
-
-                if (!isDaySelected) {
-                    // Legend for phases
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
-                            LegendItem(color = LocalPhaseColors.current.menstrual, label = "Menstrual")
-                            LegendItem(color = LocalPhaseColors.current.folicular, label = "Folicular")
-                        }
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
-                            LegendItem(color = LocalPhaseColors.current.ovulacion, label = "Ovulación")
-                            LegendItem(color = LocalPhaseColors.current.lutea, label = "Lútea")
-                        }
-                    }
-                } else {
-                    // Inline logging section (HU-02 updated)
-                    val currentSymptom = uiState.symptoms[uiState.selectedDate.toString()]
-                    LoggingSectionCard(
-                        selectedDate = uiState.selectedDate,
-                        isBleeding = currentSymptom?.isBleeding ?: false,
-                        flowLevel = currentSymptom?.flowLevel ?: 0,
-                        crampIntensity = currentSymptom?.crampIntensity ?: 0,
-                        clotLevel = currentSymptom?.clotLevel ?: 0,
-                        onUpdate = { bleeding, flow, cramps, clots ->
-                            viewModel.onSaveSymptom(uiState.selectedDate, bleeding, flow, cramps, clots)
-                        }
-                    )
-                }
-                
-                Spacer(modifier = Modifier.weight(1f))
             }
+            
+            Spacer(modifier = Modifier.weight(1f))
         }
     }
 }
@@ -429,35 +406,6 @@ fun SymptomDropdownRow(
                     )
                 }
             }
-        }
-    }
-}
-
-@Composable
-fun BottomNavBar(activeTab: String, onTabSelected: (String) -> Unit) {
-    NavigationBar(containerColor = SurfaceContainer, tonalElevation = 8.dp) {
-        val navItems = listOf(
-            NavItem("Inicio", Icons.Default.Home),
-            NavItem("Calendario", Icons.Default.CalendarMonth),
-            NavItem("Resumen", Icons.Default.BarChart),
-            NavItem("Ajustes", Icons.Default.Settings)
-        )
-
-        navItems.forEach { item ->
-            val isActive = activeTab == item.label
-            NavigationBarItem(
-                selected = isActive,
-                onClick = { onTabSelected(item.label) },
-                icon = { Icon(item.icon, item.label, modifier = Modifier.size(24.dp)) },
-                label = { Text(item.label, fontFamily = ManropeFontFamily, fontWeight = FontWeight.Bold, fontSize = 11.sp) },
-                colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = OnPrimaryContainer,
-                    selectedTextColor = Primary,
-                    indicatorColor = PrimaryContainer,
-                    unselectedIconColor = OnSurfaceVariant,
-                    unselectedTextColor = OnSurfaceVariant
-                )
-            )
         }
     }
 }

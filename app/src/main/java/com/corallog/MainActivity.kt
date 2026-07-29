@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -40,18 +42,21 @@ class MainActivity : ComponentActivity() {
                 Scaffold(
                     bottomBar = {
                         NavigationBar(containerColor = SurfaceContainer, tonalElevation = 8.dp) {
-                            NavigationBarItem(
-                                selected = selectedTab == "Calendario",
-                                onClick = { selectedTab = "Calendario" },
-                                icon = { Icon(Icons.Default.CalendarMonth, null) },
-                                label = { Text("Calendario", fontSize = 11.sp) }
+                            val navItems = listOf(
+                                Triple("Inicio", Icons.Default.Home, "Inicio"),
+                                Triple("Calendario", Icons.Default.CalendarMonth, "Calendario"),
+                                Triple("Resumen", Icons.Default.BarChart, "Resumen"),
+                                Triple("Ajustes", Icons.Default.Settings, "Ajustes")
                             )
-                            NavigationBarItem(
-                                selected = selectedTab == "Ajustes",
-                                onClick = { selectedTab = "Ajustes" },
-                                icon = { Icon(Icons.Default.Settings, null) },
-                                label = { Text("Ajustes", fontSize = 11.sp) }
-                            )
+
+                            navItems.forEach { (label, icon, route) ->
+                                NavigationBarItem(
+                                    selected = selectedTab == route,
+                                    onClick = { selectedTab = route },
+                                    icon = { Icon(icon, label) },
+                                    label = { Text(label, fontSize = 11.sp) }
+                                )
+                            }
                         }
                     }
                 ) { innerPadding ->
@@ -64,6 +69,11 @@ class MainActivity : ComponentActivity() {
                         when (selectedTab) {
                             "Calendario" -> CalendarScreen()
                             "Ajustes" -> SettingsScreen()
+                            else -> {
+                                Box(modifier = Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
+                                    Text("Próximamente: $selectedTab")
+                                }
+                            }
                         }
                     }
                 }
