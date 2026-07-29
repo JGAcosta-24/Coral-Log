@@ -1,5 +1,14 @@
 <resources>
     <string name="app_name">Coral Log</string>
+    <string name="settings">Ajustes</string>
+    <string name="theme">Tema</string>
+    <string name="theme_coral">Tema Coral</string>
+    <string name="theme_ocean">Tema Océano</string>
+    <string name="theme_forest">Tema Bosque</string>
+    <string name="typography">Tipografía</string>
+    <string name="font_roboto">Roboto (Clásica)</string>
+    <string name="font_merriweather">Merriweather (Elegante)</string>
+    <string name="font_nunito">Nunito (Redondeada)</string>
 
     <!-- Navigation -->
     <string name="nav_home">Inicio</string>

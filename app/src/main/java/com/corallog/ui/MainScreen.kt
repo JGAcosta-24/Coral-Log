@@ -18,6 +18,7 @@ import androidx.navigation.compose.rememberNavController
 import com.corallog.R
 import com.corallog.feature.calendar.CalendarScreen
 import com.corallog.feature.metrics.MetricsScreen
+import com.corallog.feature.settings.SettingsScreen
 import com.corallog.ui.navigation.Screen
 import com.corallog.ui.theme.ManropeFontFamily
 import com.corallog.ui.theme.OnPrimaryContainer
@@ -106,8 +107,7 @@ fun MainScreen() {
                 )
             }
             composable(Screen.Settings.route) {
-                // TODO: Implement Settings Screen (Epic 4)
-                Text(stringResource(R.string.nav_settings), modifier = Modifier.padding(16.dp))
+                SettingsScreen()
             }
         }
     }
