@@ -54,6 +54,9 @@ dependencies {
     implementation(libs.koin.android)
     implementation(libs.koin.compose)
 
+    // Navigation
+    implementation(libs.androidx.navigation.compose)
+
     // DataStore
     implementation("androidx.datastore:datastore-preferences:1.0.0")
 

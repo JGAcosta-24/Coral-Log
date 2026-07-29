@@ -18,7 +18,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -26,6 +25,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.corallog.R
+import com.corallog.data.CyclePhase
 import com.corallog.ui.theme.*
 import java.time.LocalDate
 import java.time.YearMonth
@@ -43,13 +43,6 @@ data class DayState(
     val phase: CyclePhase,
     val isToday: Boolean = false
 )
-
-/**
- * Enumeration of menstrual cycle phases.
- */
-enum class CyclePhase {
-    MENSTRUAL, FOLICULAR, OVULACION, LUTEA, NONE
-}
 
 /**
  * Main Calendar screen implementation.
@@ -141,7 +134,7 @@ fun CalendarScreen(
                 ) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
                         LegendItem(color = LocalPhaseColors.current.menstrual, label = stringResource(R.string.phase_menstrual))
-                        LegendItem(color = LocalPhaseColors.current.folicular, label = stringResource(R.string.phase_folicular))
+                        LegendItem(color = LocalPhaseColors.current.folicular, label = stringResource(R.string.phase_follicular))
                     }
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
                         LegendItem(color = LocalPhaseColors.current.ovulacion, label = stringResource(R.string.phase_ovulation))
@@ -311,16 +304,16 @@ fun LoggingSectionCard(
     onUpdate: (Boolean, Int, Int, Int) -> Unit
 ) {
     val flowOptions = listOf(
-        stringResource(R.string.level_min),
-        stringResource(R.string.level_low),
-        stringResource(R.string.level_med),
-        stringResource(R.string.level_high),
-        stringResource(R.string.level_max)
+        stringResource(R.string.flow_min),
+        stringResource(R.string.flow_light),
+        stringResource(R.string.flow_mod),
+        stringResource(R.string.flow_high),
+        stringResource(R.string.flow_heavy)
     )
     val clotOptions = listOf(
-        stringResource(R.string.level_low),
-        stringResource(R.string.level_med),
-        stringResource(R.string.level_high)
+        stringResource(R.string.clot_light),
+        stringResource(R.string.clot_mod),
+        stringResource(R.string.clot_high)
     )
 
     Card(
@@ -339,7 +332,7 @@ fun LoggingSectionCard(
         ) {
             Text(
                 text = stringResource(
-                    R.string.logging_title, 
+                    R.string.registration_for, 
                     selectedDate.dayOfMonth, 
                     selectedDate.month.getDisplayName(TextStyle.FULL, Locale.getDefault())
                 ),
@@ -368,7 +361,7 @@ fun LoggingSectionCard(
 
             // Dropdown Symptom Selectors
             SymptomDropdownRow(
-                label = stringResource(R.string.flow_level),
+                label = stringResource(R.string.flow_label),
                 options = flowOptions,
                 selectedIndex = flowLevel - 1,
                 enabled = isBleeding,
@@ -376,7 +369,7 @@ fun LoggingSectionCard(
             )
 
             SymptomDropdownRow(
-                label = stringResource(R.string.cramp_intensity),
+                label = stringResource(R.string.cramps_label),
                 options = flowOptions,
                 selectedIndex = crampIntensity - 1,
                 enabled = isBleeding,
@@ -384,7 +377,7 @@ fun LoggingSectionCard(
             )
 
             SymptomDropdownRow(
-                label = stringResource(R.string.clots),
+                label = stringResource(R.string.clots_label),
                 options = clotOptions,
                 selectedIndex = clotLevel - 1,
                 enabled = isBleeding,
@@ -459,8 +452,6 @@ fun SymptomDropdownRow(
         }
     }
 }
-
-data class NavItem(val label: String, val icon: ImageVector)
 
 @Composable
 fun LegendItem(color: Color, label: String) {
