@@ -4,10 +4,50 @@ import android.app.Activity
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
+
+/**
+ * Data class to hold menstrual phase colors.
+ */
+data class PhaseColors(
+    val menstrual: Color,
+    val folicular: Color,
+    val ovulacion: Color,
+    val lutea: Color
+)
+
+/**
+ * CompositionLocal to provide PhaseColors globally.
+ */
+val LocalPhaseColors = staticCompositionLocalOf<PhaseColors> { 
+    error("No PhaseColors provided") 
+}
+
+/**
+ * Palette for the "Coral" theme.
+ */
+private val CoralPhaseColors = PhaseColors(
+    menstrual = PhaseMenstrualCoral,
+    folicular = PhaseFolicularCoral,
+    ovulacion = PhaseOvulacionCoral,
+    lutea = PhaseLuteaCoral
+)
+
+/**
+ * Palette for the "Océano" theme.
+ */
+private val OceanPhaseColors = PhaseColors(
+    menstrual = MenstrualOcean,
+    folicular = FolicularOcean,
+    ovulacion = OvulacionOcean,
+    lutea = LuteaOcean
+)
 
 private val DarkColorScheme = darkColorScheme(
     primary = Primary,
@@ -31,10 +71,17 @@ private val DarkColorScheme = darkColorScheme(
 
 @Composable
 fun CoralLogTheme(
+    themeName: String = "CORAL",
     content: @Composable () -> Unit
 ) {
     val colorScheme = DarkColorScheme
     val view = LocalView.current
+
+    // Selection of phase colors based on theme name
+    val selectedPhaseColors = when (themeName) {
+        "OCEANO" -> OceanPhaseColors
+        else -> CoralPhaseColors
+    }
 
     if (!view.isInEditMode) {
         SideEffect {
@@ -45,9 +92,11 @@ fun CoralLogTheme(
         }
     }
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        content = content
-    )
+    CompositionLocalProvider(LocalPhaseColors provides selectedPhaseColors) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = Typography,
+            content = content
+        )
+    }
 }

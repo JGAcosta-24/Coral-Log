@@ -159,12 +159,12 @@ fun CalendarScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
-                            LegendItem(color = PhaseMenstrual, label = "Menstrual")
-                            LegendItem(color = PhaseFolicular, label = "Folicular")
+                            LegendItem(color = LocalPhaseColors.current.menstrual, label = "Menstrual")
+                            LegendItem(color = LocalPhaseColors.current.folicular, label = "Folicular")
                         }
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
-                            LegendItem(color = PhaseOvulacion, label = "Ovulación")
-                            LegendItem(color = PhaseLutea, label = "Lútea")
+                            LegendItem(color = LocalPhaseColors.current.ovulacion, label = "Ovulación")
+                            LegendItem(color = LocalPhaseColors.current.lutea, label = "Lútea")
                         }
                     }
                 } else {
@@ -263,10 +263,10 @@ fun CalendarCard(
                             Box(modifier = Modifier.weight(1f).aspectRatio(1f), contentAlignment = Alignment.Center) {
                                 if (dayState != null) {
                                     val cellBgColor = when (dayState.phase) {
-                                        CyclePhase.MENSTRUAL -> PhaseMenstrual
-                                        CyclePhase.FOLICULAR -> PhaseFolicular
-                                        CyclePhase.OVULACION -> PhaseOvulacion
-                                        CyclePhase.LUTEA -> PhaseLutea
+                                        CyclePhase.MENSTRUAL -> LocalPhaseColors.current.menstrual
+                                        CyclePhase.FOLICULAR -> LocalPhaseColors.current.folicular
+                                        CyclePhase.OVULACION -> LocalPhaseColors.current.ovulacion
+                                        CyclePhase.LUTEA -> LocalPhaseColors.current.lutea
                                         CyclePhase.NONE -> Color.Transparent
                                     }
                                     val textColor = if (dayState.phase == CyclePhase.OVULACION || dayState.phase == CyclePhase.LUTEA) OnTertiary else OnSurface
