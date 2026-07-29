@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings">Ajustes</string>
+    <string name="theme">Tema</string>
+    <string name="theme_coral">Tema Coral</string>
+    <string name="theme_ocean">Tema Océano</string>
+</resources>
