@@ -2,15 +2,16 @@ package com.corallog.feature.calendar
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.corallog.data.CycleEntity
 import com.corallog.data.SymptomEntity
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.YearMonth
-import java.time.temporal.ChronoUnit
 
 /**
  * ViewModel for the Calendar feature.
@@ -64,10 +65,12 @@ class CalendarViewModel(
         viewModelScope.launch {
             val bleedingDates = repository.getAllBleedingDates()
                 .map { LocalDate.parse(it) }
-                .sorted()
 
-            val cycleStarts = calculateAllCycleStarts(bleedingDates)
+            val cycleStarts = CyclePhaseCalculator.calculateAllCycleStarts(bleedingDates)
             
+            // Sync identified cycles to the database (Sprint 2/3 requirement)
+            syncCyclesToDatabase(cycleStarts)
+
             _uiState.update { state ->
                 state.copy(cycleStarts = cycleStarts)
             }
@@ -76,27 +79,18 @@ class CalendarViewModel(
     }
 
     /**
-     * Identifies all valid cycle start dates using a chronological linear approach.
-     * Logic: A new cycle only starts if a bleeding day is >= 21 days from the LAST valid start.
+     * Syncs identified cycle starts to the Room Database.
      */
-    private fun calculateAllCycleStarts(dates: List<LocalDate>): List<LocalDate> {
-        if (dates.isEmpty()) return emptyList()
+    private suspend fun syncCyclesToDatabase(identifiedStarts: List<LocalDate>) {
+        val existingCycles = repository.getAllCycles().first()
+        val existingStarts = existingCycles.map { it.startDate }
 
-        val cycleStarts = mutableListOf<LocalDate>()
-        var currentCycleStart: LocalDate = dates[0]
-        cycleStarts.add(currentCycleStart)
-
-        for (i in 1 until dates.size) {
-            val day = dates[i]
-            val daysSinceValidStart = ChronoUnit.DAYS.between(currentCycleStart, day)
-
-            if (daysSinceValidStart >= 21) {
-                currentCycleStart = day
-                cycleStarts.add(currentCycleStart)
+        identifiedStarts.forEach { start ->
+            val startIso = start.toString()
+            if (startIso !in existingStarts) {
+                repository.upsertCycle(CycleEntity(startDate = startIso))
             }
         }
-
-        return cycleStarts
     }
 
     private fun loadSymptomsForMonth(month: YearMonth) {
