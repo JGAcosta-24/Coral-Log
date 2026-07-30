@@ -74,4 +74,10 @@ class CalendarRepository(
      */
     suspend fun getAllBleedingDates(): List<String> =
         symptomDao.getAllBleedingDates()
+
+    /**
+     * Observes all dates with recorded bleeding as a Flow.
+     */
+    fun observeAllBleedingDates(): Flow<List<String>> =
+        symptomDao.observeAllBleedingDates()
 }

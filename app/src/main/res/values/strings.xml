@@ -23,6 +23,41 @@
     <string name="phase_luteal">Luteal</string>
     <string name="phase_none">None</string>
 
+    <!-- Home Screen (Sprint 2) -->
+    <string name="days_remaining">%1$d days left for your next period</string>
+    <string name="period_today">Your period should start today</string>
+    <string name="delay_warning">You are %1$d days late</string>
+    <string name="symptoms_title">Typical Symptoms</string>
+    <string name="status_title">Cycle Status</string>
+    <string name="current_phase_label">Current Phase</string>
+    <string name="no_data_home">Not enough data to calculate</string>
+    <string name="coming_soon">Coming soon: %1$s</string>
+
+    <!-- Phase Symptoms Descriptions -->
+    <string name="symptom_menstrual_1">Abdominal cramps and bloating</string>
+    <string name="symptom_menstrual_2">Tiredness or fatigue</string>
+    <string name="symptom_menstrual_3">Lower back pain</string>
+    <string name="symptom_folicular_1">Increased energy levels</string>
+    <string name="symptom_folicular_2">Improved mood and focus</string>
+    <string name="symptom_folicular_3">Glowy skin and hair</string>
+    <string name="symptom_ovulation_1">Slight abdominal twinges (Mittelschmerz)</string>
+    <string name="symptom_ovulation_2">Changes in cervical mucus</string>
+    <string name="symptom_ovulation_3">Increased libido and social energy</string>
+    <string name="symptom_luteal_1">Breast tenderness</string>
+    <string name="symptom_luteal_2">Mood swings or irritability</string>
+    <string name="symptom_luteal_3">Food cravings or water retention</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_welcome">Welcome to Coral Log</string>
+    <string name="onboarding_subtitle">To provide accurate predictions, we need some initial data.</string>
+    <string name="last_period_question">When did your last period start?</string>
+    <string name="avg_length_question">What is your average cycle duration (days)?</string>
+    <string name="start_tracking">Start Tracking</string>
+    <string name="select_date">Select Date</string>
+    <string name="terms_and_privacy_consent">I have read and accept the terms of use and privacy policy</string>
+    <string name="terms_of_use">Terms of Use</string>
+    <string name="privacy_policy">Privacy Policy</string>
+
     <!-- Metrics Screen (Sprint 3) -->
     <string name="metrics_title">Health Analysis</string>
     <string name="metrics_subtitle">Your Historical Patterns</string>
