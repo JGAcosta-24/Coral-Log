@@ -3,6 +3,7 @@ package com.corallog.feature.metrics
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -11,112 +12,103 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.corallog.R
 import com.corallog.ui.theme.*
 import org.koin.androidx.compose.koinViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * Main screen for cycle metrics and data insights.
+ */
 @Composable
 fun MetricsScreen(
     viewModel: MetricsViewModel = koinViewModel(),
-    onNavigateToCalendar: () -> Unit = {}
+    onNavigateToCalendar: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val scrollState = rememberScrollState()
 
-    Scaffold(
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = {
-                    Text(
-                        text = stringResource(R.string.metrics_title),
-                        fontFamily = ManropeFontFamily,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 24.sp,
-                        color = Primary
-                    )
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Background
-                )
-            )
-        }
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .padding(innerPadding)
-                .fillMaxSize()
-                .background(Background)
-                .verticalScroll(scrollState)
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
-        ) {
-            if (uiState.isLoading) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = Primary)
-                }
-            } else if (!uiState.hasEnoughData) {
-                EmptyStateView(onNavigateToCalendar)
-            } else {
-                MetricsContent(uiState)
-            }
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Background)
+    ) {
+        if (uiState.isLoading) {
+            CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = Primary)
+        } else if (!uiState.hasEnoughData) {
+            EmptyStateView(onNavigateToCalendar)
+        } else {
+            MetricsContent(uiState)
         }
     }
 }
 
 @Composable
-fun MetricsContent(state: MetricsUiState) {
-    Text(
-        text = stringResource(R.string.metrics_subtitle),
-        style = MaterialTheme.typography.titleMedium,
-        color = OnSurfaceVariant,
-        fontFamily = ManropeFontFamily
-    )
+private fun MetricsContent(state: MetricsUiState) {
+    val scrollState = rememberScrollState()
 
-    MetricCard(
-        title = stringResource(R.string.cycle_duration_title),
-        value = state.averageCycleDuration?.let { stringResource(R.string.cycle_duration_value, it) } ?: "--",
-        description = stringResource(R.string.cycle_duration_desc),
-        icon = Icons.Default.Update,
-        iconColor = LocalPhaseColors.current.folicular
-    )
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(scrollState)
+            .padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp)
+    ) {
+        Text(
+            text = stringResource(R.string.metrics_title),
+            style = MaterialTheme.typography.headlineMedium,
+            color = Primary
+        )
+        
+        Text(
+            text = stringResource(R.string.metrics_subtitle),
+            style = MaterialTheme.typography.bodyMedium,
+            color = OnSurfaceVariant
+        )
 
-    MetricCard(
-        title = stringResource(R.string.flow_level_title),
-        value = state.dominantFlowLevelRes?.let { stringResource(it) } ?: stringResource(R.string.unknown),
-        description = stringResource(R.string.flow_level_desc),
-        icon = Icons.Default.WaterDrop,
-        iconColor = LocalPhaseColors.current.menstrual
-    )
+        MetricCard(
+            title = stringResource(R.string.cycle_duration_title),
+            value = state.averageCycleDuration?.let { stringResource(R.string.cycle_duration_value, it) } ?: "--",
+            description = stringResource(R.string.cycle_duration_desc),
+            icon = Icons.Default.Update,
+            iconColor = LocalPhaseColors.current.folicular
+        )
 
-    MetricCard(
-        title = stringResource(R.string.clots_title),
-        value = state.dominantClotLevelRes?.let { stringResource(it) } ?: stringResource(R.string.unknown),
-        description = stringResource(R.string.clots_desc),
-        icon = Icons.Default.Opacity,
-        iconColor = ColorPeriodoRed
-    )
+        MetricCard(
+            title = stringResource(R.string.flow_level_title),
+            value = state.dominantFlowLevelRes?.let { stringResource(it) } ?: stringResource(R.string.unknown),
+            description = stringResource(R.string.flow_level_desc),
+            icon = Icons.Default.WaterDrop,
+            iconColor = LocalPhaseColors.current.menstrual
+        )
 
-    MetricCard(
-        title = stringResource(R.string.cramps_intensity_title),
-        value = state.averageCrampLevelRes?.let { stringResource(it) } ?: stringResource(R.string.unknown),
-        description = stringResource(R.string.cramps_intensity_desc),
-        icon = Icons.Default.Bolt,
-        iconColor = LocalPhaseColors.current.ovulacion
-    )
-    
-    Spacer(modifier = Modifier.height(20.dp))
+        MetricCard(
+            title = stringResource(R.string.clots_title),
+            value = state.dominantClotLevelRes?.let { stringResource(it) } ?: stringResource(R.string.unknown),
+            description = stringResource(R.string.clots_desc),
+            icon = Icons.Default.Opacity,
+            iconColor = ColorPeriodoRed
+        )
+
+        MetricCard(
+            title = stringResource(R.string.cramps_intensity_title),
+            value = state.averageCrampLevelRes?.let { stringResource(it) } ?: stringResource(R.string.unknown),
+            description = stringResource(R.string.cramps_intensity_desc),
+            icon = Icons.Default.Bolt,
+            iconColor = LocalPhaseColors.current.ovulacion
+        )
+        
+        Spacer(modifier = Modifier.height(20.dp))
+    }
 }
 
 @Composable
-fun MetricCard(
+private fun MetricCard(
     title: String,
     value: String,
     description: String,
@@ -126,46 +118,44 @@ fun MetricCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = SurfaceContainerLow)
+        colors = CardDefaults.cardColors(containerColor = SurfaceContainer)
     ) {
         Row(
             modifier = Modifier.padding(20.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Surface(
-                modifier = Modifier.size(48.dp),
-                shape = RoundedCornerShape(12.dp),
-                color = iconColor.copy(alpha = 0.2f)
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(iconColor.copy(alpha = 0.15f)),
+                contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
                     tint = iconColor,
-                    modifier = Modifier.padding(10.dp)
+                    modifier = Modifier.size(24.dp)
                 )
             }
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = title,
-                    fontSize = 14.sp,
-                    color = OnSurfaceVariant,
-                    fontFamily = ManropeFontFamily
+                    style = MaterialTheme.typography.labelLarge,
+                    color = OnSurfaceVariant
                 )
                 Text(
                     text = value,
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleLarge,
                     color = OnSurface,
-                    fontFamily = ManropeFontFamily
+                    fontWeight = FontWeight.Bold
                 )
-                Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = description,
-                    fontSize = 12.sp,
-                    color = OnSurfaceVariant.copy(alpha = 0.7f),
-                    lineHeight = 16.sp
+                    style = MaterialTheme.typography.bodySmall,
+                    color = OnSurfaceVariant
                 )
             }
         }
@@ -173,42 +163,40 @@ fun MetricCard(
 }
 
 @Composable
-fun EmptyStateView(onActionClick: () -> Unit = {}) {
+private fun EmptyStateView(onNavigateToCalendar: () -> Unit) {
     Column(
         modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 40.dp),
+            .fillMaxSize()
+            .padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.Center
     ) {
         Icon(
             imageVector = Icons.Default.Analytics,
             contentDescription = null,
             modifier = Modifier.size(80.dp),
-            tint = SurfaceVariant
+            tint = SurfaceContainerHigh
         )
+        Spacer(modifier = Modifier.height(24.dp))
         Text(
             text = stringResource(R.string.insufficient_data_title),
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.titleLarge,
             color = OnSurface,
-            fontFamily = ManropeFontFamily
+            textAlign = TextAlign.Center
         )
+        Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = stringResource(R.string.insufficient_data_desc),
-            textAlign = TextAlign.Center,
+            style = MaterialTheme.typography.bodyMedium,
             color = OnSurfaceVariant,
-            fontSize = 16.sp,
-            modifier = Modifier.padding(horizontal = 24.dp)
+            textAlign = TextAlign.Center
         )
-        
+        Spacer(modifier = Modifier.height(32.dp))
         Button(
-            onClick = onActionClick,
-            colors = ButtonDefaults.buttonColors(containerColor = PrimaryContainer),
-            shape = RoundedCornerShape(12.dp),
-            modifier = Modifier.padding(top = 8.dp)
+            onClick = onNavigateToCalendar,
+            colors = ButtonDefaults.buttonColors(containerColor = Primary)
         ) {
-            Text(stringResource(R.string.go_to_calendar), color = Color.White)
+            Text(text = stringResource(R.string.go_to_calendar), color = Color.White)
         }
     }
 }

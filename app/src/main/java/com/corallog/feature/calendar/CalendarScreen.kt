@@ -18,7 +18,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -30,6 +29,7 @@ import com.corallog.data.CyclePhase
 import com.corallog.ui.theme.*
 import java.time.LocalDate
 import java.time.YearMonth
+import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.*
 import org.koin.androidx.compose.koinViewModel
@@ -107,20 +107,6 @@ fun CalendarScreen(
                 .padding(horizontal = 20.dp, vertical = 5.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            // Re-adding the header that was in the TopAppBar before, but as part of the content
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
-                horizontalArrangement = Arrangement.Center
-            ) {
-                Text(
-                    text = stringResource(R.string.app_name),
-                    fontFamily = ManropeFontFamily,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 24.sp,
-                    color = Primary
-                )
-            }
-
             CalendarCard(
                 currentMonth = uiState.currentMonth,
                 onMonthChange = { 
@@ -171,7 +157,7 @@ fun CalendarScreen(
                 )
             }
             
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.weight(1f))
         }
     }
 }
@@ -226,9 +212,17 @@ fun CalendarCard(
 
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Box(modifier = Modifier.background(SurfaceContainerHigh, CircleShape).padding(horizontal = 16.dp, vertical = 4.dp)) {
-                        Text(text = currentMonth.month.getDisplayName(TextStyle.FULL, Locale.getDefault()), color = OnSurface, fontWeight = FontWeight.Medium, fontSize = 20.sp)
+                        Text(
+                            text = currentMonth.month.getDisplayName(TextStyle.FULL, Locale.getDefault()), 
+                            color = OnSurface, 
+                            style = MaterialTheme.typography.titleMedium
+                        )
                     }
-                    Text(text = currentMonth.year.toString(), color = OnSurfaceVariant, fontSize = 20.sp)
+                    Text(
+                        text = currentMonth.year.toString(), 
+                        color = OnSurfaceVariant, 
+                        style = MaterialTheme.typography.titleMedium
+                    )
                 }
 
                 IconButton(onClick = { onMonthChange(currentMonth.plusMonths(1)) }) {
@@ -236,18 +230,29 @@ fun CalendarCard(
                 }
             }
 
-            val weekDays = listOf(
-                stringResource(R.string.day_mon),
-                stringResource(R.string.day_tue),
-                stringResource(R.string.day_wed),
-                stringResource(R.string.day_thu),
-                stringResource(R.string.day_fri),
-                stringResource(R.string.day_sat),
-                stringResource(R.string.day_sun)
-            )
+            val locale = Locale.getDefault()
+            val weekDays = remember(locale) {
+                listOf(
+                    LocalDate.of(2024, 1, 1), // Monday
+                    LocalDate.of(2024, 1, 2),
+                    LocalDate.of(2024, 1, 3),
+                    LocalDate.of(2024, 1, 4),
+                    LocalDate.of(2024, 1, 5),
+                    LocalDate.of(2024, 1, 6),
+                    LocalDate.of(2024, 1, 7)
+                ).map { it.format(DateTimeFormatter.ofPattern("EEE", locale)) }
+            }
+
             Row(modifier = Modifier.fillMaxWidth()) {
                 weekDays.forEach { dayName ->
-                    Text(text = dayName, modifier = Modifier.weight(1f), textAlign = TextAlign.Center, color = OnSurfaceVariant, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = dayName, 
+                        modifier = Modifier.weight(1f), 
+                        textAlign = TextAlign.Center, 
+                        color = OnSurfaceVariant, 
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
 
@@ -273,7 +278,11 @@ fun CalendarCard(
                                             .border(if (dayState.dayOfMonth == selectedDay) 2.dp else 0.dp, Primary, CircleShape),
                                         contentAlignment = Alignment.Center
                                     ) {
-                                        Text(text = dayState.dayOfMonth.toString(), color = textColor, fontWeight = FontWeight.Medium, fontSize = 18.sp)
+                                        Text(
+                                            text = dayState.dayOfMonth.toString(), 
+                                            color = textColor, 
+                                            style = MaterialTheme.typography.titleMedium
+                                        )
                                     }
                                 }
                             }
@@ -314,24 +323,22 @@ fun LoggingSectionCard(
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
-            ) { /* Consume click to prevent dismissal when clicking inside this card */ },
+            ) { /* Consume click */ },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = SurfaceContainer)
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
                 text = stringResource(
-                    R.string.registration_for,
-                    selectedDate.dayOfMonth,
+                    R.string.registration_for, 
+                    selectedDate.dayOfMonth, 
                     selectedDate.month.getDisplayName(TextStyle.FULL, Locale.getDefault())
                 ),
                 style = MaterialTheme.typography.titleMedium,
-                fontSize = 18.sp,
-                color = OnSurface,
-                fontFamily = ManropeFontFamily
+                color = OnSurface
             )
 
             // Checkbox for bleeding
@@ -340,39 +347,43 @@ fun LoggingSectionCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                    Checkbox(
-                        checked = isBleeding,
-                        onCheckedChange = { onUpdate(it, flowLevel, crampIntensity, clotLevel) },
-                        colors = CheckboxDefaults.colors(checkedColor = ColorPeriodoRed)
-                    )
-                    Icon(Icons.Default.WaterDrop, null, tint = ColorPeriodoRed, modifier = Modifier.size(24.dp))
-                    Text(stringResource(R.string.bleeding_question), color = OnSurface, fontSize = 16.sp)
-                }
-
-                // Dropdown Symptom Selectors
-                SymptomDropdownRow(
-                    label = stringResource(R.string.flow_label),
-                    options = flowOptions,
-                    selectedIndex = flowLevel - 1,
-                    enabled = isBleeding,
-                    onSelectionChange = { index -> onUpdate(isBleeding, index + 1, crampIntensity, clotLevel) }
+                Checkbox(
+                    checked = isBleeding,
+                    onCheckedChange = { onUpdate(it, flowLevel, crampIntensity, clotLevel) },
+                    colors = CheckboxDefaults.colors(checkedColor = ColorPeriodoRed)
                 )
-
-                SymptomDropdownRow(
-                    label = stringResource(R.string.cramps_label),
-                    options = flowOptions,
-                    selectedIndex = crampIntensity - 1,
-                    enabled = isBleeding,
-                    onSelectionChange = { index -> onUpdate(isBleeding, flowLevel, index + 1, clotLevel) }
+                Icon(Icons.Default.WaterDrop, null, tint = ColorPeriodoRed, modifier = Modifier.size(24.dp))
+                Text(
+                    text = stringResource(R.string.bleeding_question), 
+                    color = OnSurface, 
+                    style = MaterialTheme.typography.bodyLarge
                 )
+            }
 
-                SymptomDropdownRow(
-                    label = stringResource(R.string.clots_label),
-                    options = clotOptions,
-                    selectedIndex = clotLevel - 1,
-                    enabled = isBleeding,
-                    onSelectionChange = { index -> onUpdate(isBleeding, flowLevel, crampIntensity, index + 1) }
-                )
+            // Dropdown Symptom Selectors
+            SymptomDropdownRow(
+                label = stringResource(R.string.flow_label),
+                options = flowOptions,
+                selectedIndex = flowLevel - 1,
+                enabled = isBleeding,
+                onSelectionChange = { index -> onUpdate(isBleeding, index + 1, crampIntensity, clotLevel) }
+            )
+
+            SymptomDropdownRow(
+                label = stringResource(R.string.cramps_label),
+                options = flowOptions,
+                selectedIndex = crampIntensity - 1,
+                enabled = isBleeding,
+                onSelectionChange = { index -> onUpdate(isBleeding, flowLevel, index + 1, clotLevel) }
+            )
+
+            SymptomDropdownRow(
+                label = stringResource(R.string.clots_label),
+                options = clotOptions,
+                selectedIndex = clotLevel - 1,
+                enabled = isBleeding,
+                onSelectionChange = { index -> onUpdate(isBleeding, flowLevel, crampIntensity, index + 1) }
+            )
         }
     }
 }
@@ -396,7 +407,7 @@ fun SymptomDropdownRow(
         Text(
             text = label,
             color = if (enabled) OnSurface else OnSurface.copy(alpha = 0.4f),
-            fontSize = 16.sp,
+            style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.weight(1f)
         )
 
@@ -420,7 +431,7 @@ fun SymptomDropdownRow(
                     disabledTextColor = OnSurface.copy(alpha = 0.4f)
                 ),
                 enabled = enabled,
-                textStyle = LocalTextStyle.current.copy(fontSize = 14.sp),
+                textStyle = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.menuAnchor()
             )
 
@@ -431,7 +442,7 @@ fun SymptomDropdownRow(
             ) {
                 options.forEachIndexed { index, selectionOption ->
                     DropdownMenuItem(
-                        text = { Text(text = selectionOption, fontSize = 14.sp) },
+                        text = { Text(text = selectionOption, style = MaterialTheme.typography.bodyMedium) },
                         onClick = {
                             onSelectionChange(index)
                             expanded = false
@@ -447,6 +458,10 @@ fun SymptomDropdownRow(
 fun LegendItem(color: Color, label: String) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Box(modifier = Modifier.size(12.dp).background(color, CircleShape))
-        Text(text = label, fontSize = 14.sp, color = OnSurfaceVariant, fontFamily = ManropeFontFamily)
+        Text(
+            text = label, 
+            style = MaterialTheme.typography.bodyMedium, 
+            color = OnSurfaceVariant
+        )
     }
 }
