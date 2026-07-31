@@ -3,7 +3,9 @@ package com.corallog.data
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
@@ -22,6 +24,16 @@ class UserPreferencesRepository(private val context: Context) {
     private object PreferencesKeys {
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val FONT_FAMILY = stringPreferencesKey("font_family")
+        val IS_ONBOARDING_COMPLETED = booleanPreferencesKey("is_onboarding_completed")
+        val AVG_CYCLE_LENGTH = intPreferencesKey("average_cycle_length")
+        val LAST_PERIOD_DATE = stringPreferencesKey("last_period_date")
+    }
+
+    /**
+     * Flow that emits whether the onboarding has been completed.
+     */
+    val isOnboardingCompletedFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[PreferencesKeys.IS_ONBOARDING_COMPLETED] ?: false
     }
 
     /**
@@ -41,6 +53,30 @@ class UserPreferencesRepository(private val context: Context) {
     }
 
     /**
+     * Flow that emits the average cycle length (onboarding).
+     * Defaults to 28 days.
+     */
+    val averageCycleLengthFlow: Flow<Int> = context.dataStore.data.map { preferences ->
+        preferences[PreferencesKeys.AVG_CYCLE_LENGTH] ?: 28
+    }
+
+    /**
+     * Flow that emits the last recorded period start date (ISO string).
+     */
+    val lastPeriodDateFlow: Flow<String?> = context.dataStore.data.map { preferences ->
+        preferences[PreferencesKeys.LAST_PERIOD_DATE]
+    }
+
+    /**
+     * Updates the onboarding completion status.
+     */
+    suspend fun saveOnboardingCompleted(completed: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.IS_ONBOARDING_COMPLETED] = completed
+        }
+    }
+
+    /**
      * Updates the user theme preference asynchronously.
      */
     suspend fun saveTheme(themeName: String) {
@@ -55,6 +91,24 @@ class UserPreferencesRepository(private val context: Context) {
     suspend fun saveFont(fontName: String) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.FONT_FAMILY] = fontName
+        }
+    }
+
+    /**
+     * Saves the average cycle length (onboarding).
+     */
+    suspend fun saveAverageCycleLength(length: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.AVG_CYCLE_LENGTH] = length
+        }
+    }
+
+    /**
+     * Saves the last period date (onboarding or latest log).
+     */
+    suspend fun saveLastPeriodDate(dateIso: String) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.LAST_PERIOD_DATE] = dateIso
         }
     }
 }

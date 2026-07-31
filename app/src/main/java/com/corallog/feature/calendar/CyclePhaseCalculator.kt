@@ -11,6 +11,34 @@ import java.time.temporal.ChronoUnit
 object CyclePhaseCalculator {
 
     /**
+     * Identifies all valid cycle start dates from a list of bleeding dates.
+     * A new cycle starts if a bleeding day is >= 21 days from the last valid start.
+     * 
+     * @param bleedingDates List of all recorded bleeding dates.
+     * @return List of identified cycle start dates.
+     */
+    fun calculateAllCycleStarts(bleedingDates: List<LocalDate>): List<LocalDate> {
+        if (bleedingDates.isEmpty()) return emptyList()
+
+        val sortedDates = bleedingDates.sorted()
+        val cycleStarts = mutableListOf<LocalDate>()
+        var currentCycleStart: LocalDate = sortedDates[0]
+        cycleStarts.add(currentCycleStart)
+
+        for (i in 1 until sortedDates.size) {
+            val day = sortedDates[i]
+            val daysSinceValidStart = ChronoUnit.DAYS.between(currentCycleStart, day)
+
+            if (daysSinceValidStart >= 21) {
+                currentCycleStart = day
+                cycleStarts.add(currentCycleStart)
+            }
+        }
+
+        return cycleStarts
+    }
+
+    /**
      * Determines the [CyclePhase] for a specific date based on historical cycle starts.
      * This implementation supports recurring cycles using modulo arithmetic.
      * 
@@ -37,11 +65,15 @@ object CyclePhaseCalculator {
         // Cycle day (1-indexed) using modulo for continuous cycle prediction
         val cycleDay = (daysDiff % cycleLength) + 1
 
+        // Biological standard: Luteal phase is constant (~14 days before next period)
+        // Ovulation happens around 14 days before the next period starts.
+        val ovulationDay = cycleLength - 14
+        
         return when (cycleDay) {
             in 1..periodLength -> CyclePhase.MENSTRUAL
-            in (periodLength + 1)..13 -> CyclePhase.FOLICULAR
-            in 14..15 -> CyclePhase.OVULACION
-            in 16..cycleLength -> CyclePhase.LUTEA
+            in (periodLength + 1) until ovulationDay -> CyclePhase.FOLICULAR
+            in ovulationDay..(ovulationDay + 1) -> CyclePhase.OVULACION
+            in (ovulationDay + 2)..cycleLength -> CyclePhase.LUTEA
             else -> CyclePhase.NONE
         }
     }
