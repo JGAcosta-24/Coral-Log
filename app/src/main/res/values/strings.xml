@@ -71,7 +71,7 @@
     <string name="cramps_intensity_title">Cramps Intensity</string>
     <string name="cramps_intensity_desc">Average pain recorded only during your period days.</string>
     <string name="insufficient_data_title">Insufficient Data</string>
-    <string name="insufficient_data_desc">We need at least 2 valid cycles (regular duration) recorded to show these metrics.</string>
+    <string name="insufficient_data_desc">We need the third menstrual cycle (of regular duration) must begin in order to display these metrics.</string>
     <string name="go_to_calendar">Go to Calendar</string>
 
     <!-- Labels and Categories -->
