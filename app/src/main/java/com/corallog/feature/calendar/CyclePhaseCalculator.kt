@@ -65,11 +65,15 @@ object CyclePhaseCalculator {
         // Cycle day (1-indexed) using modulo for continuous cycle prediction
         val cycleDay = (daysDiff % cycleLength) + 1
 
+        // Biological standard: Luteal phase is constant (~14 days before next period)
+        // Ovulation happens around 14 days before the next period starts.
+        val ovulationDay = cycleLength - 14
+        
         return when (cycleDay) {
             in 1..periodLength -> CyclePhase.MENSTRUAL
-            in (periodLength + 1)..13 -> CyclePhase.FOLICULAR
-            in 14..15 -> CyclePhase.OVULACION
-            in 16..cycleLength -> CyclePhase.LUTEA
+            in (periodLength + 1) until ovulationDay -> CyclePhase.FOLICULAR
+            in ovulationDay..(ovulationDay + 1) -> CyclePhase.OVULACION
+            in (ovulationDay + 2)..cycleLength -> CyclePhase.LUTEA
             else -> CyclePhase.NONE
         }
     }

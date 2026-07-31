@@ -4,11 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.corallog.data.CycleEntity
 import com.corallog.data.SymptomEntity
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.update
+import com.corallog.data.UserPreferencesRepository
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.YearMonth
@@ -18,14 +15,24 @@ import java.time.YearMonth
  * Manages calendar navigation and symptom logging persistence.
  */
 class CalendarViewModel(
-    private val repository: CalendarRepository
+    private val repository: CalendarRepository,
+    private val prefsRepository: UserPreferencesRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CalendarUiState())
     val uiState: StateFlow<CalendarUiState> = _uiState.asStateFlow()
 
     init {
+        observePreferences()
         refreshData()
+    }
+
+    private fun observePreferences() {
+        prefsRepository.averageCycleLengthFlow
+            .onEach { length ->
+                _uiState.update { it.copy(averageCycleLength = length) }
+            }
+            .launchIn(viewModelScope)
     }
 
     fun onMonthChange(newMonth: YearMonth) {

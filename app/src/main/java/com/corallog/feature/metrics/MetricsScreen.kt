@@ -85,7 +85,7 @@ fun MetricsContent(state: MetricsUiState) {
         value = state.averageCycleDuration?.let { stringResource(R.string.cycle_duration_value, it) } ?: "--",
         description = stringResource(R.string.cycle_duration_desc),
         icon = Icons.Default.Update,
-        iconColor = PhaseFolicular
+        iconColor = LocalPhaseColors.current.folicular
     )
 
     MetricCard(
@@ -93,7 +93,7 @@ fun MetricsContent(state: MetricsUiState) {
         value = state.dominantFlowLevelRes?.let { stringResource(it) } ?: stringResource(R.string.unknown),
         description = stringResource(R.string.flow_level_desc),
         icon = Icons.Default.WaterDrop,
-        iconColor = PhaseMenstrual
+        iconColor = LocalPhaseColors.current.menstrual
     )
 
     MetricCard(
@@ -109,7 +109,7 @@ fun MetricsContent(state: MetricsUiState) {
         value = state.averageCrampLevelRes?.let { stringResource(it) } ?: stringResource(R.string.unknown),
         description = stringResource(R.string.cramps_intensity_desc),
         icon = Icons.Default.Bolt,
-        iconColor = PhaseOvulacion
+        iconColor = LocalPhaseColors.current.ovulacion
     )
     
     Spacer(modifier = Modifier.height(20.dp))

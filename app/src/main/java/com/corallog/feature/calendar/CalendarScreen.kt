@@ -73,7 +73,8 @@ fun CalendarScreen(
             // HU-03: Real phase calculation based on all historical cycle starts
             val phase = CyclePhaseCalculator.calculatePhase(
                 currentDate = date,
-                cycleStarts = uiState.cycleStarts
+                cycleStarts = uiState.cycleStarts,
+                cycleLength = uiState.averageCycleLength
             )
             
             daysList.add(
@@ -147,12 +148,12 @@ fun CalendarScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
-                        LegendItem(color = PhaseMenstrual, label = stringResource(R.string.phase_menstrual))
-                        LegendItem(color = PhaseFolicular, label = stringResource(R.string.phase_follicular))
+                        LegendItem(color = LocalPhaseColors.current.menstrual, label = stringResource(R.string.phase_menstrual))
+                        LegendItem(color = LocalPhaseColors.current.folicular, label = stringResource(R.string.phase_follicular))
                     }
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
-                        LegendItem(color = PhaseOvulacion, label = stringResource(R.string.phase_ovulation))
-                        LegendItem(color = PhaseLutea, label = stringResource(R.string.phase_luteal))
+                        LegendItem(color = LocalPhaseColors.current.ovulacion, label = stringResource(R.string.phase_ovulation))
+                        LegendItem(color = LocalPhaseColors.current.lutea, label = stringResource(R.string.phase_luteal))
                     }
                 }
             } else {
@@ -258,10 +259,10 @@ fun CalendarCard(
                             Box(modifier = Modifier.weight(1f).aspectRatio(1f), contentAlignment = Alignment.Center) {
                                 if (dayState != null) {
                                     val cellBgColor = when (dayState.phase) {
-                                        CyclePhase.MENSTRUAL -> PhaseMenstrual
-                                        CyclePhase.FOLICULAR -> PhaseFolicular
-                                        CyclePhase.OVULACION -> PhaseOvulacion
-                                        CyclePhase.LUTEA -> PhaseLutea
+                                        CyclePhase.MENSTRUAL -> LocalPhaseColors.current.menstrual
+                                        CyclePhase.FOLICULAR -> LocalPhaseColors.current.folicular
+                                        CyclePhase.OVULACION -> LocalPhaseColors.current.ovulacion
+                                        CyclePhase.LUTEA -> LocalPhaseColors.current.lutea
                                         CyclePhase.NONE -> Color.Transparent
                                     }
                                     val textColor = if (dayState.phase == CyclePhase.OVULACION || dayState.phase == CyclePhase.LUTEA) OnTertiary else OnSurface
