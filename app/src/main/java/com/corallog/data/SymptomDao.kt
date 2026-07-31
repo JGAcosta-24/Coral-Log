@@ -35,6 +35,12 @@ interface SymptomDao {
     suspend fun getAllBleedingDates(): List<String>
 
     /**
+     * Observes all dates where bleeding was recorded as a Flow.
+     */
+    @Query("SELECT date FROM symptoms WHERE isBleeding = 1 ORDER BY date ASC")
+    fun observeAllBleedingDates(): Flow<List<String>>
+
+    /**
      * Retrieves all symptom records where bleeding was present.
      * Essential for calculating flow and cramp metrics (HU-08, HU-09).
      */

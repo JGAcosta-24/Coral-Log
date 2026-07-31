@@ -1,7 +1,11 @@
 package com.corallog.ui
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -9,15 +13,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavDestination.Companion.hierarchy
-import androidx.navigation.NavGraph.Companion.findStartDestination
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.navigation.compose.rememberNavController
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.corallog.R
+import com.corallog.data.UserPreferencesRepository
 import com.corallog.feature.calendar.CalendarScreen
+import com.corallog.feature.home.HomeScreen
 import com.corallog.feature.metrics.MetricsScreen
+import com.corallog.feature.onboarding.OnboardingScreen
 import com.corallog.feature.settings.SettingsScreen
 import com.corallog.ui.navigation.Screen
 import com.corallog.ui.theme.ManropeFontFamily
@@ -26,89 +28,94 @@ import com.corallog.ui.theme.OnSurfaceVariant
 import com.corallog.ui.theme.Primary
 import com.corallog.ui.theme.PrimaryContainer
 import com.corallog.ui.theme.SurfaceContainer
+import kotlinx.coroutines.launch
+import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen() {
-    val navController = rememberNavController()
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentDestination = navBackStackEntry?.destination
+    val prefsRepository: UserPreferencesRepository = koinInject()
+    val onboardingCompleted by prefsRepository.isOnboardingCompletedFlow
+        .collectAsStateWithLifecycle(initialValue = null)
 
-    Scaffold(
-        bottomBar = {
-            NavigationBar(
-                containerColor = SurfaceContainer,
-                tonalElevation = 8.dp
-            ) {
-                Screen.items.forEach { screen ->
-                    val isSelected = currentDestination?.hierarchy?.any { it.route == screen.route } == true
-                    
-                    NavigationBarItem(
-                        selected = isSelected,
-                        onClick = {
-                            navController.navigate(screen.route) {
-                                // Pop up to the start destination of the graph to
-                                // avoid building up a large stack of destinations
-                                // on the back stack as users select items
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
+    if (onboardingCompleted == null) {
+        // Initializing DataStore...
+        Box(modifier = Modifier.fillMaxSize())
+    } else if (!onboardingCompleted!!) {
+        OnboardingScreen(
+            onFinished = { /* Flow will update automatically */ }
+        )
+    } else {
+        val pagerState = rememberPagerState(initialPage = 0) { Screen.items.size }
+        val coroutineScope = rememberCoroutineScope()
+
+        Scaffold(
+            bottomBar = {
+                NavigationBar(
+                    containerColor = SurfaceContainer,
+                    tonalElevation = 8.dp
+                ) {
+                    Screen.items.forEachIndexed { index, screen ->
+                        val isSelected = pagerState.currentPage == index
+                        
+                        NavigationBarItem(
+                            selected = isSelected,
+                            onClick = {
+                                coroutineScope.launch {
+                                    pagerState.animateScrollToPage(index)
                                 }
-                                // Avoid multiple copies of the same destination when
-                                // reselecting the same item
-                                launchSingleTop = true
-                                // Restore state when reselecting a previously selected item
-                                restoreState = true
-                            }
-                        },
-                        icon = { Icon(screen.icon, stringResource(screen.labelRes), modifier = Modifier.size(24.dp)) },
-                        label = { 
-                            Text(
-                                text = stringResource(screen.labelRes), 
-                                fontFamily = ManropeFontFamily, 
-                                fontWeight = FontWeight.Bold, 
-                                fontSize = 11.sp
-                            ) 
-                        },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = OnPrimaryContainer,
-                            selectedTextColor = Primary,
-                            indicatorColor = PrimaryContainer,
-                            unselectedIconColor = OnSurfaceVariant,
-                            unselectedTextColor = OnSurfaceVariant
+                            },
+                            icon = { Icon(screen.icon, stringResource(screen.labelRes), modifier = Modifier.size(24.dp)) },
+                            label = { 
+                                Text(
+                                    text = stringResource(screen.labelRes), 
+                                    fontFamily = ManropeFontFamily, 
+                                    fontWeight = FontWeight.Bold, 
+                                    fontSize = 11.sp
+                                ) 
+                            },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = OnPrimaryContainer,
+                                selectedTextColor = Primary,
+                                indicatorColor = PrimaryContainer,
+                                unselectedIconColor = OnSurfaceVariant,
+                                unselectedTextColor = OnSurfaceVariant
+                            )
                         )
-                    )
+                    }
+                }
+            }
+        ) { innerPadding ->
+            HorizontalPadding(innerPadding) {
+                HorizontalPager(
+                    state = pagerState,
+                    modifier = Modifier.fillMaxSize(),
+                    userScrollEnabled = true,
+                    beyondViewportPageCount = 1
+                ) { pageIndex ->
+                    when (Screen.items[pageIndex]) {
+                        Screen.Home -> HomeScreen()
+                        Screen.Calendar -> CalendarScreen()
+                        Screen.Metrics -> {
+                            MetricsScreen(
+                                onNavigateToCalendar = {
+                                    coroutineScope.launch {
+                                        pagerState.animateScrollToPage(Screen.items.indexOf(Screen.Calendar))
+                                    }
+                                }
+                            )
+                        }
+                        Screen.Settings -> SettingsScreen()
+                    }
                 }
             }
         }
-    ) { innerPadding ->
-        NavHost(
-            navController = navController,
-            startDestination = Screen.Calendar.route,
-            modifier = Modifier.padding(innerPadding)
-        ) {
-            composable(Screen.Home.route) {
-                // Placeholder
-                Text(stringResource(R.string.nav_home), modifier = Modifier.padding(16.dp))
-            }
-            composable(Screen.Calendar.route) {
-                CalendarScreen()
-            }
-            composable(Screen.Metrics.route) {
-                MetricsScreen(
-                    onNavigateToCalendar = {
-                        navController.navigate(Screen.Calendar.route) {
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                saveState = true
-                            }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    }
-                )
-            }
-            composable(Screen.Settings.route) {
-                SettingsScreen()
-            }
-        }
+    }
+}
+
+@Composable
+fun HorizontalPadding(padding: androidx.compose.foundation.layout.PaddingValues, content: @Composable () -> Unit) {
+    Box(modifier = Modifier.padding(padding)) {
+        content()
     }
 }
