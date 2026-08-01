@@ -20,7 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.corallog.R
-import com.corallog.ui.theme.*
+import com.corallog.ui.theme.LocalPhaseColors
 import org.koin.androidx.compose.koinViewModel
 
 /**
@@ -36,10 +36,13 @@ fun MetricsScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Background)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         if (uiState.isLoading) {
-            CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = Primary)
+            CircularProgressIndicator(
+                modifier = Modifier.align(Alignment.Center),
+                color = MaterialTheme.colorScheme.primary
+            )
         } else if (!uiState.hasEnoughData) {
             EmptyStateView(onNavigateToCalendar)
         } else {
@@ -62,13 +65,13 @@ private fun MetricsContent(state: MetricsUiState) {
         Text(
             text = stringResource(R.string.metrics_title),
             style = MaterialTheme.typography.headlineMedium,
-            color = Primary
+            color = MaterialTheme.colorScheme.primary
         )
         
         Text(
             text = stringResource(R.string.metrics_subtitle),
             style = MaterialTheme.typography.bodyMedium,
-            color = OnSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
         MetricCard(
@@ -92,7 +95,7 @@ private fun MetricsContent(state: MetricsUiState) {
             value = state.dominantClotLevelRes?.let { stringResource(it) } ?: stringResource(R.string.unknown),
             description = stringResource(R.string.clots_desc),
             icon = Icons.Default.Opacity,
-            iconColor = ColorPeriodoRed
+            iconColor = MaterialTheme.colorScheme.error // proxy para PeriodoRed
         )
 
         MetricCard(
@@ -118,7 +121,7 @@ private fun MetricCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = SurfaceContainer)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
     ) {
         Row(
             modifier = Modifier.padding(20.dp),
@@ -144,18 +147,18 @@ private fun MetricCard(
                 Text(
                     text = title,
                     style = MaterialTheme.typography.labelLarge,
-                    color = OnSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
                     text = value,
                     style = MaterialTheme.typography.titleLarge,
-                    color = OnSurface,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
                     text = description,
                     style = MaterialTheme.typography.bodySmall,
-                    color = OnSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -175,28 +178,28 @@ private fun EmptyStateView(onNavigateToCalendar: () -> Unit) {
             imageVector = Icons.Default.Analytics,
             contentDescription = null,
             modifier = Modifier.size(80.dp),
-            tint = SurfaceContainerHigh
+            tint = MaterialTheme.colorScheme.surfaceContainerHigh
         )
         Spacer(modifier = Modifier.height(24.dp))
         Text(
             text = stringResource(R.string.insufficient_data_title),
             style = MaterialTheme.typography.titleLarge,
-            color = OnSurface,
+            color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = stringResource(R.string.insufficient_data_desc),
             style = MaterialTheme.typography.bodyMedium,
-            color = OnSurfaceVariant,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(32.dp))
         Button(
             onClick = onNavigateToCalendar,
-            colors = ButtonDefaults.buttonColors(containerColor = Primary)
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
         ) {
-            Text(text = stringResource(R.string.go_to_calendar), color = Color.White)
+            Text(text = stringResource(R.string.go_to_calendar), color = MaterialTheme.colorScheme.onPrimary)
         }
     }
 }

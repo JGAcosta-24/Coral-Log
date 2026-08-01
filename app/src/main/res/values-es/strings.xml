@@ -1,6 +1,10 @@
 <resources>
     <string name="app_name">Coral Log</string>
     <string name="settings">Ajustes</string>
+    <string name="display_mode">Modo de Pantalla</string>
+    <string name="mode_system">Predeterminado del Sistema</string>
+    <string name="mode_light">Modo Claro</string>
+    <string name="mode_dark">Modo Oscuro</string>
     <string name="theme">Tema</string>
     <string name="theme_coral">Tema Coral</string>
     <string name="theme_ocean">Tema Océano</string>
