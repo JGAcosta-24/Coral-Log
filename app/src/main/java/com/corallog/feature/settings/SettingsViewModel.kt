@@ -17,13 +17,18 @@ class SettingsViewModel(
 ) : ViewModel() {
 
     /**
-     * UI state combining theme and font preferences.
+     * UI state combining theme, theme selection, and font preferences.
      */
     val uiState: StateFlow<SettingsUiState> = combine(
         repository.userThemeFlow,
+        repository.userThemeSelectionFlow,
         repository.userFontFlow
-    ) { theme, font ->
-        SettingsUiState.Success(currentTheme = theme, currentFont = font)
+    ) { theme, selection, font ->
+        SettingsUiState.Success(
+            currentTheme = theme,
+            currentThemeSelection = selection,
+            currentFont = font
+        )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
@@ -36,6 +41,15 @@ class SettingsViewModel(
     fun updateTheme(newTheme: String) {
         viewModelScope.launch {
             repository.saveTheme(newTheme)
+        }
+    }
+
+    /**
+     * Updates the user theme selection (LIGHT, DARK, SYSTEM).
+     */
+    fun updateThemeSelection(selection: String) {
+        viewModelScope.launch {
+            repository.saveThemeSelection(selection)
         }
     }
 

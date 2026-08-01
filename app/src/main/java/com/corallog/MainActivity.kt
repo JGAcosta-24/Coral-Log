@@ -42,12 +42,18 @@ class MainActivity : ComponentActivity() {
         setContent {
             val currentTheme by prefsRepository.userThemeFlow
                 .collectAsStateWithLifecycle(initialValue = "CORAL")
+            val currentThemeSelection by prefsRepository.userThemeSelectionFlow
+                .collectAsStateWithLifecycle(initialValue = "SYSTEM")
             val currentFont by prefsRepository.userFontFlow
                 .collectAsStateWithLifecycle(initialValue = "ROBOTO")
             val isOnboardingCompleted by prefsRepository.isOnboardingCompletedFlow
                 .collectAsStateWithLifecycle(initialValue = null)
 
-            CoralLogTheme(themeName = currentTheme, fontName = currentFont) {
+            CoralLogTheme(
+                themeName = currentTheme,
+                themeSelection = currentThemeSelection,
+                fontName = currentFont
+            ) {
                 // Wait for DataStore initial read to avoid flicker
                 if (isOnboardingCompleted != null) {
                     if (isOnboardingCompleted == true) {
@@ -72,7 +78,10 @@ fun MainAppContent() {
 
     Scaffold(
         bottomBar = {
-            NavigationBar(containerColor = SurfaceContainer, tonalElevation = 8.dp) {
+            NavigationBar(
+                containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                tonalElevation = 8.dp
+            ) {
                 val navItems = listOf(
                     Triple(stringResource(R.string.nav_home), Icons.Default.Home, "Home"),
                     Triple(stringResource(R.string.nav_calendar), Icons.Default.CalendarMonth, "Calendario"),

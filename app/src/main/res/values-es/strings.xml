@@ -1,6 +1,10 @@
 <resources>
     <string name="app_name">Coral Log</string>
     <string name="settings">Ajustes</string>
+    <string name="display_mode">Modo de Pantalla</string>
+    <string name="mode_system">Predeterminado del Sistema</string>
+    <string name="mode_light">Modo Claro</string>
+    <string name="mode_dark">Modo Oscuro</string>
     <string name="theme">Tema</string>
     <string name="theme_coral">Tema Coral</string>
     <string name="theme_ocean">Tema Océano</string>
@@ -77,7 +81,7 @@
     <string name="cramps_intensity_title">Intensidad de Cólicos</string>
     <string name="cramps_intensity_desc">Promedio de dolor registrado solo durante tus días de periodo.</string>
     <string name="insufficient_data_title">Datos Insuficientes</string>
-    <string name="insufficient_data_desc">Necesitamos al menos 2 ciclos válidos (duración regular) registrados para mostrar estas métricas.</string>
+    <string name="insufficient_data_desc">Necesitamos iniciar el tercer ciclo menstrual (duración regular) para mostrar estas métricas</string>
     <string name="go_to_calendar">Ir al Calendario</string>
 
     <!-- Labels and Categories -->

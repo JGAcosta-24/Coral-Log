@@ -7,6 +7,7 @@ sealed interface SettingsUiState {
     data object Loading : SettingsUiState
     data class Success(
         val currentTheme: String,
+        val currentThemeSelection: String,
         val currentFont: String
     ) : SettingsUiState
 }
