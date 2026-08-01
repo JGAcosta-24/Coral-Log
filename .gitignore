@@ -14,3 +14,4 @@ local.properties
 *.jks
 *.p12
 /.idea
+**/keepRules/rules.md
