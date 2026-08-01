@@ -25,7 +25,9 @@ val dataModule = module {
             androidContext(),
             AppDatabase::class.java,
             "coral_log_db"
-        ).build()
+        )
+            .fallbackToDestructiveMigration()
+            .build()
     }
 
     // DAOs
