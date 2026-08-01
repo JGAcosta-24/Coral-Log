@@ -21,11 +21,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.corallog.R
-import com.corallog.ui.theme.Background
-import com.corallog.ui.theme.OnSurface
-import com.corallog.ui.theme.OnSurfaceVariant
-import com.corallog.ui.theme.Primary
-import kotlinx.coroutines.launch
+import com.corallog.ui.theme.*
 import org.koin.androidx.compose.koinViewModel
 import java.time.Instant
 import java.time.LocalDate
@@ -38,7 +34,6 @@ fun OnboardingScreen(
     viewModel: OnboardingViewModel = koinViewModel(),
     onFinished: () -> Unit
 ) {
-    val coroutineScope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
     val snackbarHostState = remember { SnackbarHostState() }
     
@@ -46,12 +41,13 @@ fun OnboardingScreen(
     var avgCycleLength by remember { mutableStateOf("28") }
     var showDatePicker by remember { mutableStateOf(false) }
     var termsAccepted by remember { mutableStateOf(false) }
+    var showPrivacyDialog by remember { mutableStateOf(false) }
+    var showTermsDialog by remember { mutableStateOf(false) }
 
     val datePickerState = rememberDatePickerState(
         initialSelectedDateMillis = System.currentTimeMillis()
     )
 
-    val comingSoonMsg = stringResource(R.string.coming_soon, "")
     val termsLabel = stringResource(R.string.terms_of_use)
     val privacyLabel = stringResource(R.string.privacy_policy)
 
@@ -168,7 +164,7 @@ fun OnboardingScreen(
                             color = Primary,
                             textDecoration = TextDecoration.Underline,
                             modifier = Modifier.clickable {
-                                coroutineScope.launch { snackbarHostState.showSnackbar(comingSoonMsg + termsLabel) }
+                                showTermsDialog = true
                             }
                         )
                         Text(
@@ -177,7 +173,7 @@ fun OnboardingScreen(
                             color = Primary,
                             textDecoration = TextDecoration.Underline,
                             modifier = Modifier.clickable {
-                                coroutineScope.launch { snackbarHostState.showSnackbar(comingSoonMsg + privacyLabel) }
+                                showPrivacyDialog = true
                             }
                         )
                     }
@@ -239,4 +235,59 @@ fun OnboardingScreen(
             }
         }
     }
+
+    if (showTermsDialog) {
+        LegalContentDialog(
+            title = stringResource(R.string.terms_of_use),
+            content = stringResource(R.string.terms_of_use_content),
+            onDismiss = { showTermsDialog = false }
+        )
+    }
+
+    if (showPrivacyDialog) {
+        LegalContentDialog(
+            title = stringResource(R.string.privacy_policy),
+            content = stringResource(R.string.privacy_policy_content),
+            onDismiss = { showPrivacyDialog = false }
+        )
+    }
+}
+
+@Composable
+fun LegalContentDialog(
+    title: String,
+    content: String,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.headlineSmall,
+                color = Primary,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxHeight(0.8f)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                Text(
+                    text = content.replace("<b>", "").replace("</b>", ""),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = OnSurface
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.close), color = Primary)
+            }
+        },
+        shape = RoundedCornerShape(24.dp),
+        containerColor = SurfaceContainerHigh
+    )
 }
