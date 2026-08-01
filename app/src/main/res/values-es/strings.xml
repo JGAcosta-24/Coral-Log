@@ -81,7 +81,7 @@
     <string name="cramps_intensity_title">Intensidad de Cólicos</string>
     <string name="cramps_intensity_desc">Promedio de dolor registrado solo durante tus días de periodo.</string>
     <string name="insufficient_data_title">Datos Insuficientes</string>
-    <string name="insufficient_data_desc">Necesitamos al menos 2 ciclos válidos (duración regular) registrados para mostrar estas métricas.</string>
+    <string name="insufficient_data_desc">Necesitamos iniciar el tercer ciclo menstrual (duración regular) para mostrar estas métricas</string>
     <string name="go_to_calendar">Ir al Calendario</string>
 
     <!-- Labels and Categories -->

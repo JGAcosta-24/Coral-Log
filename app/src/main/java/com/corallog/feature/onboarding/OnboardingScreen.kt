@@ -20,6 +20,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.corallog.R
+import com.corallog.ui.theme.*
 import org.koin.androidx.compose.koinViewModel
 import java.time.Instant
 import java.time.LocalDate
