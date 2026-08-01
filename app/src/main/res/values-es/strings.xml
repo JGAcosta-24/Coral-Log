@@ -30,6 +30,7 @@
     <string name="symptoms_title">Síntomas Típicos</string>
     <string name="status_title">Estado del Ciclo</string>
     <string name="current_phase_label">Fase Actual</string>
+    <string name="next_period_prediction">Próximo período previsto: %1$s</string>
     <string name="no_data_home">No hay datos suficientes</string>
     <string name="coming_soon">Próximamente: %1$s</string>
 
