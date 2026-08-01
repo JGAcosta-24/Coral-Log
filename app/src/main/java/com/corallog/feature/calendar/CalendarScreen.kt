@@ -73,7 +73,8 @@ fun CalendarScreen(
             // HU-03: Real phase calculation based on all historical cycle starts
             val phase = CyclePhaseCalculator.calculatePhase(
                 currentDate = date,
-                cycleStarts = uiState.cycleStarts
+                cycleStarts = uiState.cycleStarts,
+                cycleLength = uiState.averageCycleLength
             )
             
             daysList.add(

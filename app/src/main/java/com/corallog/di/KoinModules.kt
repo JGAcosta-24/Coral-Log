@@ -42,7 +42,7 @@ val dataModule = module {
  * Koin module for ViewModel dependencies.
  */
 val viewModelModule = module {
-    viewModel { CalendarViewModel(get()) }
+    viewModel { CalendarViewModel(get(), get()) }
     viewModel { MetricsViewModel(get()) }
     viewModel { SettingsViewModel(get()) }
     viewModel { HomeViewModel(get(), get()) }
