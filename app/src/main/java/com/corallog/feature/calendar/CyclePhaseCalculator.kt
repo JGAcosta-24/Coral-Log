@@ -39,6 +39,30 @@ object CyclePhaseCalculator {
     }
 
     /**
+     * Finds the projected start date of the cycle that contains [targetDate].
+     * Treats [cycleStarts] as reference points and projects forward/backward using [cycleLength].
+     */
+    fun findProjectedCycleStart(
+        targetDate: LocalDate,
+        cycleStarts: List<LocalDate>,
+        cycleLength: Int
+    ): LocalDate {
+        // 1. Pick the best reference point (closest recorded date)
+        val referenceDate = cycleStarts.minByOrNull { 
+            Math.abs(ChronoUnit.DAYS.between(it, targetDate)) 
+        } ?: targetDate
+
+        // 2. Calculate the difference and the offset within the cycle
+        val daysDiff = ChronoUnit.DAYS.between(referenceDate, targetDate)
+        
+        // Modulo can be negative in Kotlin, so we adjust to always get a positive remainder
+        val cycleOffset = ((daysDiff % cycleLength) + cycleLength) % cycleLength
+        
+        // 3. The projected start is the target date minus the offset
+        return targetDate.minusDays(cycleOffset)
+    }
+
+    /**
      * Determines the [CyclePhase] for a specific date based on historical cycle starts.
      * This implementation supports recurring cycles using modulo arithmetic.
      * 
@@ -54,35 +78,13 @@ object CyclePhaseCalculator {
         cycleLength: Int = 28,
         periodLength: Int = 5
     ): CyclePhase {
-        // 1. Find the best baseline date for projection
-        val recentStart = cycleStarts
-            .filter { !it.isAfter(currentDate) }
-            .maxOrNull()
+        if (cycleStarts.isEmpty()) return CyclePhase.NONE
 
-        val baselineDate: LocalDate = if (recentStart != null) {
-            recentStart
-        } else {
-            // If no recorded cycle start is before the current date,
-            // project the earliest available seed date BACKWARDS.
-            val earliestSeed = cycleStarts.minByOrNull { it } ?: return CyclePhase.NONE
-            var backProjected = earliestSeed
-            while (backProjected.isAfter(currentDate)) {
-                backProjected = backProjected.minusDays(cycleLength.toLong())
-            }
-            backProjected
-        }
+        val projectedStart = findProjectedCycleStart(currentDate, cycleStarts, cycleLength)
 
-        // 2. Project FORWARD from baseline to find the closest start point for the current month
-        var projectedStart = baselineDate
-        while (!projectedStart.plusDays(cycleLength.toLong()).isAfter(currentDate)) {
-            projectedStart = projectedStart.plusDays(cycleLength.toLong())
-        }
+        // Calculate cycle day relative to the projected start (1-indexed)
+        val cycleDay = ChronoUnit.DAYS.between(projectedStart, currentDate).toInt() + 1
 
-        // 3. Calculate cycle day relative to the projected start
-        val daysDiff = ChronoUnit.DAYS.between(projectedStart, currentDate).toInt()
-        val cycleDay = daysDiff + 1
-
-        // 4. Determine Phase using dynamic markers (Sprint 2 refactor)
         // Biological standard: Ovulation is ~14 days before the NEXT period.
         val ovulationDay = cycleLength - 14
         

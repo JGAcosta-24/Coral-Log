@@ -35,12 +35,11 @@ class HomeViewModel(
         val bleedingDates = bleedingDatesStr.map { LocalDate.parse(it) }
         val cycleStarts = CyclePhaseCalculator.calculateAllCycleStarts(bleedingDates)
 
-        // 1. Determine the most recent cycle start
-        // Either from the actual logs or from the onboarding preference if no logs exist
-        val lastStartDate = cycleStarts.maxOrNull() 
-            ?: prefLastDate?.let { LocalDate.parse(it) }
+        // 1. Baseline Anchor (Either real log or onboarding seed)
+        val seedDate = prefLastDate?.let { LocalDate.parse(it) }
+        val referencePoint = cycleStarts.lastOrNull() ?: seedDate
         
-        if (lastStartDate == null) {
+        if (referencePoint == null) {
             HomeUiState.Success(
                 daysStatus = DaysStatus.NoData,
                 currentPhase = CyclePhase.NONE,
@@ -48,33 +47,44 @@ class HomeViewModel(
             )
         } else {
             val today = LocalDate.now()
-            
-            // 2. Intelligent Target Calculation (HU-04)
-            // We want the CLOSEST future period start.
-            val allPotentialStarts = (cycleStarts + lastStartDate).distinct().sorted()
-            
-            // Try to find a start that is already in the future
-            val closestFutureStart = allPotentialStarts.firstOrNull { it.isAfter(today) }
+            val allPotentialStarts = (cycleStarts + referencePoint).distinct().sorted()
             
             var nextPeriodDate: LocalDate
             
-            if (closestFutureStart != null) {
-                // If the user already recorded a future start (or picked one in onboarding),
-                // that is our immediate target.
-                nextPeriodDate = closestFutureStart
+            // 2. UNIVERSAL RELATIVE PREDICTION
+            // We find the cycle start that contains "Today" using circular logic.
+            val currentCycleStart = CyclePhaseCalculator.findProjectedCycleStart(
+                targetDate = today,
+                cycleStarts = allPotentialStarts,
+                cycleLength = avgLength
+            )
+
+            // If we have real logs in the past, and "today" is past the predicted next start from the LAST real log, 
+            // we should show a delay.
+            val lastRealLog = cycleStarts.lastOrNull()
+            
+            if (lastRealLog != null && lastRealLog.isBefore(today)) {
+                val predictedNextFromReal = lastRealLog.plusDays(avgLength.toLong())
+                if (predictedNextFromReal.isBefore(today)) {
+                    // CASE: Delay. User is tracking and missed a period.
+                    nextPeriodDate = predictedNextFromReal
+                } else {
+                    // CASE: Normal tracking.
+                    nextPeriodDate = predictedNextFromReal
+                }
             } else {
-                // All recorded starts are in the past. 
-                // We predict the next one based on the most recent start.
-                val mostRecentStart = allPotentialStarts.last()
-                nextPeriodDate = mostRecentStart.plusDays(avgLength.toLong())
+                // CASE: Onboarding or Future Prediction.
+                // We project forward from the "currentCycleStart" to find the next one.
+                nextPeriodDate = currentCycleStart.plusDays(avgLength.toLong())
                 
-                // If the prediction is also in the past, and it's NOT a real log from the DB,
-                // we project it forward (onboarding seed case).
-                // If it IS a real log, we keep it in the past to show "Delay".
-                if (nextPeriodDate.isBefore(today) && cycleStarts.isEmpty()) {
-                    while (nextPeriodDate.isBefore(today)) {
-                        nextPeriodDate = nextPeriodDate.plusDays(avgLength.toLong())
-                    }
+                // If today IS the start day (prediction for today), remaining will be 0.
+                if (currentCycleStart.isEqual(today)) {
+                    nextPeriodDate = today
+                }
+                
+                // If back-projection found a cycle that starts in the future, target that.
+                if (currentCycleStart.isAfter(today)) {
+                    nextPeriodDate = currentCycleStart
                 }
             }
 
@@ -99,7 +109,8 @@ class HomeViewModel(
             HomeUiState.Success(
                 daysStatus = daysStatus,
                 currentPhase = currentPhase,
-                phaseSymptoms = symptoms
+                phaseSymptoms = symptoms,
+                predictedDate = nextPeriodDate
             )
         }
     }.stateIn(

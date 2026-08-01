@@ -22,6 +22,9 @@ import androidx.compose.ui.unit.sp
 import com.corallog.R
 import com.corallog.data.CyclePhase
 import com.corallog.ui.theme.*
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 import org.koin.androidx.compose.koinViewModel
 
 /**
@@ -75,7 +78,7 @@ private fun HomeContent(state: HomeUiState.Success) {
         )
 
         // Days Countdown Card (HU-04)
-        CountdownCard(state.daysStatus)
+        CountdownCard(state.daysStatus, state.predictedDate)
 
         // Phase Card (HU-05)
         PhaseCard(state.currentPhase)
@@ -90,7 +93,7 @@ private fun HomeContent(state: HomeUiState.Success) {
 }
 
 @Composable
-private fun CountdownCard(status: DaysStatus) {
+private fun CountdownCard(status: DaysStatus, predictedDate: LocalDate?) {
     val backgroundColor = when (status) {
         is DaysStatus.Delay -> MaterialTheme.colorScheme.errorContainer
         else -> SurfaceContainerLow
@@ -100,6 +103,8 @@ private fun CountdownCard(status: DaysStatus) {
         is DaysStatus.Delay -> MaterialTheme.colorScheme.onErrorContainer
         else -> OnSurface
     }
+
+    val dateFormatter = remember { DateTimeFormatter.ofPattern("d 'de' MMMM", Locale.getDefault()) }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -144,6 +149,16 @@ private fun CountdownCard(status: DaysStatus) {
                 color = contentColor.copy(alpha = 0.8f),
                 textAlign = TextAlign.Center
             )
+
+            if (predictedDate != null && status !is DaysStatus.NoData) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = stringResource(R.string.next_period_prediction, predictedDate.format(dateFormatter)),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = contentColor.copy(alpha = 0.6f),
+                    textAlign = TextAlign.Center
+                )
+            }
         }
     }
 }
