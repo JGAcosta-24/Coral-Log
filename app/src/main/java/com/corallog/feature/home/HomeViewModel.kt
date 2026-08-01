@@ -49,8 +49,35 @@ class HomeViewModel(
         } else {
             val today = LocalDate.now()
             
-            // 2. Calculate Days Status (HU-04)
-            val nextPeriodDate = lastStartDate.plusDays(avgLength.toLong())
+            // 2. Intelligent Target Calculation (HU-04)
+            // We want the CLOSEST future period start.
+            val allPotentialStarts = (cycleStarts + lastStartDate).distinct().sorted()
+            
+            // Try to find a start that is already in the future
+            val closestFutureStart = allPotentialStarts.firstOrNull { it.isAfter(today) }
+            
+            var nextPeriodDate: LocalDate
+            
+            if (closestFutureStart != null) {
+                // If the user already recorded a future start (or picked one in onboarding),
+                // that is our immediate target.
+                nextPeriodDate = closestFutureStart
+            } else {
+                // All recorded starts are in the past. 
+                // We predict the next one based on the most recent start.
+                val mostRecentStart = allPotentialStarts.last()
+                nextPeriodDate = mostRecentStart.plusDays(avgLength.toLong())
+                
+                // If the prediction is also in the past, and it's NOT a real log from the DB,
+                // we project it forward (onboarding seed case).
+                // If it IS a real log, we keep it in the past to show "Delay".
+                if (nextPeriodDate.isBefore(today) && cycleStarts.isEmpty()) {
+                    while (nextPeriodDate.isBefore(today)) {
+                        nextPeriodDate = nextPeriodDate.plusDays(avgLength.toLong())
+                    }
+                }
+            }
+
             val daysDiff = ChronoUnit.DAYS.between(today, nextPeriodDate).toInt()
 
             val daysStatus = when {
@@ -62,7 +89,7 @@ class HomeViewModel(
             // 3. Calculate Current Phase (HU-05)
             val currentPhase = CyclePhaseCalculator.calculatePhase(
                 currentDate = today,
-                cycleStarts = if (cycleStarts.isEmpty()) listOf(lastStartDate) else cycleStarts,
+                cycleStarts = allPotentialStarts,
                 cycleLength = avgLength
             )
 

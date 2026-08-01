@@ -54,19 +54,36 @@ object CyclePhaseCalculator {
         cycleLength: Int = 28,
         periodLength: Int = 5
     ): CyclePhase {
-        // Find the most recent cycle start that is on or before the current date
-        val activeCycleStart = cycleStarts
-            .filter { it.isBefore(currentDate) || it.isEqual(currentDate) }
-            .maxOrNull() ?: return CyclePhase.NONE
+        // 1. Find the best baseline date for projection
+        val recentStart = cycleStarts
+            .filter { !it.isAfter(currentDate) }
+            .maxOrNull()
 
-        // Difference in days (0-indexed internally, but Day 1 of cycle is day 0 here)
-        val daysDiff = ChronoUnit.DAYS.between(activeCycleStart, currentDate).toInt()
-        
-        // Cycle day (1-indexed) using modulo for continuous cycle prediction
-        val cycleDay = (daysDiff % cycleLength) + 1
+        val baselineDate: LocalDate = if (recentStart != null) {
+            recentStart
+        } else {
+            // If no recorded cycle start is before the current date,
+            // project the earliest available seed date BACKWARDS.
+            val earliestSeed = cycleStarts.minByOrNull { it } ?: return CyclePhase.NONE
+            var backProjected = earliestSeed
+            while (backProjected.isAfter(currentDate)) {
+                backProjected = backProjected.minusDays(cycleLength.toLong())
+            }
+            backProjected
+        }
 
-        // Biological standard: Luteal phase is constant (~14 days before next period)
-        // Ovulation happens around 14 days before the next period starts.
+        // 2. Project FORWARD from baseline to find the closest start point for the current month
+        var projectedStart = baselineDate
+        while (!projectedStart.plusDays(cycleLength.toLong()).isAfter(currentDate)) {
+            projectedStart = projectedStart.plusDays(cycleLength.toLong())
+        }
+
+        // 3. Calculate cycle day relative to the projected start
+        val daysDiff = ChronoUnit.DAYS.between(projectedStart, currentDate).toInt()
+        val cycleDay = daysDiff + 1
+
+        // 4. Determine Phase using dynamic markers (Sprint 2 refactor)
+        // Biological standard: Ovulation is ~14 days before the NEXT period.
         val ovulationDay = cycleLength - 14
         
         return when (cycleDay) {
