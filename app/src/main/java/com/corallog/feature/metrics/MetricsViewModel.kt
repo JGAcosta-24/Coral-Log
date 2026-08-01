@@ -26,7 +26,7 @@ class MetricsViewModel(
     val uiState: StateFlow<MetricsUiState> = _uiState.asStateFlow()
 
     init {
-        repository.getBleedingSymptoms()
+        repository.getAllSymptoms()
             .onEach { symptoms ->
                 val metrics = calculateMetrics(symptoms)
                 _uiState.update { it.copy(
@@ -46,7 +46,10 @@ class MetricsViewModel(
         }
 
         // 1. Identify cycle starts dynamically (Regla de los 21 días)
-        val bleedingDates = symptoms.map { LocalDate.parse(it.date) }.sorted()
+        // Filter for bleeding days to identify cycle boundaries
+        val bleedingDates = symptoms.filter { it.isBleeding }
+            .map { LocalDate.parse(it.date) }
+            .sorted()
         val cycleStarts = calculateAllCycleStarts(bleedingDates)
 
         // HU-10: Need at least 2 cycle starts to have 1 closed cycle, 
@@ -57,10 +60,24 @@ class MetricsViewModel(
         }
 
         // HU-07: Average cycle duration (exclude < 21 or > 40)
+        // ERS Polishing: Exclude cycles with hasIllness == true
         val durations = mutableListOf<Int>()
         for (i in 0 until cycleStarts.size - 1) {
-            val duration = ChronoUnit.DAYS.between(cycleStarts[i], cycleStarts[i + 1]).toInt()
-            if (duration in 21..40) {
+            val start = cycleStarts[i]
+            val end = cycleStarts[i + 1]
+            
+            // Check if any day in this cycle range has illness
+            val hasIllnessInCycle = symptoms.any { symptom ->
+                val symptomDate = LocalDate.parse(symptom.date)
+                (symptomDate == start || symptomDate.isAfter(start)) && 
+                        symptomDate.isBefore(end) && 
+                        symptom.hasIllness
+            }
+
+            val duration = ChronoUnit.DAYS.between(start, end).toInt()
+            
+            // Combined exclusion logic: duration rule AND illness rule
+            if (duration in 21..40 && !hasIllnessInCycle) {
                 durations.add(duration)
             }
         }
@@ -72,7 +89,7 @@ class MetricsViewModel(
         // HU-08: Flow Moda (last 6 months)
         val sixMonthsAgo = LocalDate.now().minusMonths(6)
         val recentBleeding = symptoms.filter { 
-            LocalDate.parse(it.date).isAfter(sixMonthsAgo) 
+            it.isBleeding && LocalDate.parse(it.date).isAfter(sixMonthsAgo) 
         }
         
         val dominantFlowRes = if (recentBleeding.isNotEmpty()) {
@@ -95,7 +112,7 @@ class MetricsViewModel(
         } else null
 
         // HU-09: Average cramps on bleeding days
-        val bleedingWithCramps = symptoms.filter { it.crampIntensity > 0 }
+        val bleedingWithCramps = symptoms.filter { it.isBleeding && it.crampIntensity > 0 }
         val avgCrampsLabelRes = if (bleedingWithCramps.isNotEmpty()) {
             val avg = bleedingWithCramps.map { it.crampIntensity }.average().roundToInt()
             getCrampLabelRes(avg)

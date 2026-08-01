@@ -44,6 +44,9 @@ interface SymptomDao {
      * Retrieves all symptom records where bleeding was present.
      * Essential for calculating flow and cramp metrics (HU-08, HU-09).
      */
+    @Query("SELECT * FROM symptoms")
+    fun getAllSymptoms(): Flow<List<SymptomEntity>>
+
     @Query("SELECT * FROM symptoms WHERE isBleeding = 1")
     fun getAllBleedingSymptoms(): Flow<List<SymptomEntity>>
 }
