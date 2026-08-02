@@ -49,8 +49,6 @@ class HomeViewModel(
             val today = LocalDate.now()
             val allPotentialStarts = (cycleStarts + referencePoint).distinct().sorted()
             
-            var nextPeriodDate: LocalDate
-            
             // 2. UNIVERSAL RELATIVE PREDICTION
             // We find the cycle start that contains "Today" using circular logic.
             val currentCycleStart = CyclePhaseCalculator.findProjectedCycleStart(
@@ -59,36 +57,27 @@ class HomeViewModel(
                 cycleLength = avgLength
             )
 
-            // If we have real logs in the past, and "today" is past the predicted next start from the LAST real log, 
-            // we should show a delay.
-            val lastRealLog = cycleStarts.lastOrNull()
+            // Special Logic: Check if today is part of an ACTIVE bleeding phase
             val isBleedingToday = bleedingDates.any { it.isEqual(today) }
+            val lastRealLog = cycleStarts.lastOrNull()
+            
+            var nextPeriodDate: LocalDate
             
             if (isBleedingToday) {
-                // If the user is currently bleeding, we project the NEXT period start
-                // which is exactly one cycle length away from the start of THIS bleeding phase.
-                val thisCycleStart = CyclePhaseCalculator.calculateAllCycleStarts(bleedingDates).last()
-                nextPeriodDate = thisCycleStart.plusDays(avgLength.toLong())
+                // If the user is currently bleeding, the target is the NEXT cycle
+                nextPeriodDate = currentCycleStart.plusDays(avgLength.toLong())
             } else if (lastRealLog != null && lastRealLog.isBefore(today)) {
+                // Tracking mode: check for delays
                 val predictedNextFromReal = lastRealLog.plusDays(avgLength.toLong())
-                if (predictedNextFromReal.isBefore(today)) {
-                    // CASE: Delay. User is tracking and missed a period.
-                    nextPeriodDate = predictedNextFromReal
-                } else {
-                    // CASE: Normal tracking.
-                    nextPeriodDate = predictedNextFromReal
-                }
+                nextPeriodDate = predictedNextFromReal
             } else {
-                // CASE: Onboarding or Future Prediction.
-                // We project forward from the "currentCycleStart" to find the next one.
+                // Onboarding or Future Prediction
                 nextPeriodDate = currentCycleStart.plusDays(avgLength.toLong())
                 
-                // If today IS the start day (prediction for today), remaining will be 0.
                 if (currentCycleStart.isEqual(today)) {
                     nextPeriodDate = today
                 }
                 
-                // If back-projection found a cycle that starts in the future, target that.
                 if (currentCycleStart.isAfter(today)) {
                     nextPeriodDate = currentCycleStart
                 }

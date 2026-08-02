@@ -6,7 +6,7 @@ import java.time.temporal.ChronoUnit
 
 /**
  * Logic engine for calculating menstrual cycle phases.
- * Refactored for biological accuracy: Constant Luteal Phase.
+ * Refactored for biological accuracy: Constant Luteal Phase & Progressive Activation.
  */
 object CyclePhaseCalculator {
 
@@ -73,22 +73,30 @@ object CyclePhaseCalculator {
         val projectedStart = findProjectedCycleStart(currentDate, cycleStarts, cycleLength)
 
         // 1. Calculate current cycle's bleeding length
-        // Find bleeding days belonging to the cycle starting at projectedStart
         val periodLength = countConsecutiveBleedingDays(projectedStart, bleedingDates)
 
         // 2. Calculate cycle day relative to the projected start (1-indexed)
         val daysDiff = ChronoUnit.DAYS.between(projectedStart, currentDate).toInt()
         val cycleDay = daysDiff + 1
 
-        // 3. Determine Phase using biologically accurate markers
-        // Ovulation is roughly 14 days BEFORE the next period starts.
+        // 3. PROGRESSIVE ACTIVATION LOGIC (Sprint 2/3 Update)
+        // If the user has not logged at least 5 days of bleeding, 
+        // we only show the MENSTRUAL phase (Red). The rest of the month remains clean.
+        val isCycleActive = periodLength >= 5
+
+        // Biological standard: Ovulation is ~14 days BEFORE the next period starts.
         val ovulationDay = cycleLength - 14
         
-        return when (cycleDay) {
-            in 1..periodLength -> CyclePhase.MENSTRUAL
-            in (periodLength + 1) until ovulationDay -> CyclePhase.FOLICULAR
-            in ovulationDay..(ovulationDay + 1) -> CyclePhase.OVULACION
-            in (ovulationDay + 2)..cycleLength -> CyclePhase.LUTEA
+        return when {
+            // Menstrual phase is always shown if within range
+            cycleDay in 1..periodLength -> CyclePhase.MENSTRUAL
+            
+            // Other phases are only revealed once cycle is "Active" (5+ days logged)
+            !isCycleActive -> CyclePhase.NONE
+            
+            cycleDay in (periodLength + 1) until ovulationDay -> CyclePhase.FOLICULAR
+            cycleDay in ovulationDay..(ovulationDay + 1) -> CyclePhase.OVULACION
+            cycleDay in (ovulationDay + 2)..cycleLength -> CyclePhase.LUTEA
             else -> CyclePhase.NONE
         }
     }
@@ -99,19 +107,13 @@ object CyclePhaseCalculator {
     private fun countConsecutiveBleedingDays(startDate: LocalDate, bleedingDates: List<LocalDate>): Int {
         var count = 0
         var current = startDate
-        
-        // We look for a continuous streak starting from the cycle start.
-        // If the user hasn't logged anything for the current cycle yet, we assume a default of 5 for prediction colors
-        // OR we can return 0 and let the "when" block handle it.
-        // However, the user said "quiere que se adapte a los días de sangrado que indique la persona".
-        
         val bleedingSet = bleedingDates.toSet()
+        
         while (bleedingSet.contains(current)) {
             count++
             current = current.plusDays(1)
         }
         
-        // Default to 5 if no logs are present for this specific cycle yet (to show placeholder colors)
-        return if (count == 0) 5 else count
+        return count
     }
 }
