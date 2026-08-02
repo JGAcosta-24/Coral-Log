@@ -62,8 +62,14 @@ class HomeViewModel(
             // If we have real logs in the past, and "today" is past the predicted next start from the LAST real log, 
             // we should show a delay.
             val lastRealLog = cycleStarts.lastOrNull()
+            val isBleedingToday = bleedingDates.any { it.isEqual(today) }
             
-            if (lastRealLog != null && lastRealLog.isBefore(today)) {
+            if (isBleedingToday) {
+                // If the user is currently bleeding, we project the NEXT period start
+                // which is exactly one cycle length away from the start of THIS bleeding phase.
+                val thisCycleStart = CyclePhaseCalculator.calculateAllCycleStarts(bleedingDates).last()
+                nextPeriodDate = thisCycleStart.plusDays(avgLength.toLong())
+            } else if (lastRealLog != null && lastRealLog.isBefore(today)) {
                 val predictedNextFromReal = lastRealLog.plusDays(avgLength.toLong())
                 if (predictedNextFromReal.isBefore(today)) {
                     // CASE: Delay. User is tracking and missed a period.
@@ -100,6 +106,7 @@ class HomeViewModel(
             val currentPhase = CyclePhaseCalculator.calculatePhase(
                 currentDate = today,
                 cycleStarts = allPotentialStarts,
+                bleedingDates = bleedingDates,
                 cycleLength = avgLength
             )
 

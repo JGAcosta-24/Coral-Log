@@ -4,7 +4,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarToday
@@ -38,7 +37,6 @@ fun OnboardingScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     
     var selectedDate by remember { mutableStateOf<LocalDate?>(null) }
-    var avgCycleLength by remember { mutableStateOf("28") }
     var showDatePicker by remember { mutableStateOf(false) }
     var termsAccepted by remember { mutableStateOf(false) }
     var showPrivacyDialog by remember { mutableStateOf(false) }
@@ -109,29 +107,6 @@ fun OnboardingScreen(
                     }
                 }
 
-                // Question 2: Avg Length
-                Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(
-                        text = stringResource(R.string.avg_length_question),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = OnSurface,
-                        fontWeight = FontWeight.Bold
-                    )
-                    
-                    OutlinedTextField(
-                        value = avgCycleLength,
-                        onValueChange = { if (it.length <= 2) avgCycleLength = it.filter { char -> char.isDigit() } },
-                        modifier = Modifier.fillMaxWidth(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        shape = RoundedCornerShape(12.dp),
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Primary,
-                            unfocusedBorderColor = OnSurfaceVariant
-                        )
-                    )
-                }
-
                 // Terms and Privacy Checkbox
                 Column(modifier = Modifier.fillMaxWidth()) {
                     Row(
@@ -185,8 +160,7 @@ fun OnboardingScreen(
                     onClick = {
                         selectedDate?.let { date ->
                             viewModel.completeOnboarding(
-                                lastPeriodDate = date,
-                                avgLength = avgCycleLength.toIntOrNull() ?: 28
+                                lastPeriodDate = date
                             )
                             onFinished()
                         }
@@ -196,7 +170,7 @@ fun OnboardingScreen(
                         .height(56.dp),
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Primary),
-                    enabled = selectedDate != null && avgCycleLength.isNotEmpty() && termsAccepted
+                    enabled = selectedDate != null && termsAccepted
                 ) {
                     Text(
                         text = stringResource(R.string.start_tracking),

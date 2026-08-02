@@ -6,16 +6,13 @@ import java.time.temporal.ChronoUnit
 
 /**
  * Logic engine for calculating menstrual cycle phases.
- * Designed to be modular and scalable for future user-specific configurations (HU-04).
+ * Refactored for biological accuracy: Constant Luteal Phase.
  */
 object CyclePhaseCalculator {
 
     /**
      * Identifies all valid cycle start dates from a list of bleeding dates.
      * A new cycle starts if a bleeding day is >= 21 days from the last valid start.
-     * 
-     * @param bleedingDates List of all recorded bleeding dates.
-     * @return List of identified cycle start dates.
      */
     fun calculateAllCycleStarts(bleedingDates: List<LocalDate>): List<LocalDate> {
         if (bleedingDates.isEmpty()) return emptyList()
@@ -40,52 +37,51 @@ object CyclePhaseCalculator {
 
     /**
      * Finds the projected start date of the cycle that contains [targetDate].
-     * Treats [cycleStarts] as reference points and projects forward/backward using [cycleLength].
      */
     fun findProjectedCycleStart(
         targetDate: LocalDate,
         cycleStarts: List<LocalDate>,
         cycleLength: Int
     ): LocalDate {
-        // 1. Pick the best reference point (closest recorded date)
         val referenceDate = cycleStarts.minByOrNull { 
             Math.abs(ChronoUnit.DAYS.between(it, targetDate)) 
         } ?: targetDate
 
-        // 2. Calculate the difference and the offset within the cycle
         val daysDiff = ChronoUnit.DAYS.between(referenceDate, targetDate)
-        
-        // Modulo can be negative in Kotlin, so we adjust to always get a positive remainder
         val cycleOffset = ((daysDiff % cycleLength) + cycleLength) % cycleLength
         
-        // 3. The projected start is the target date minus the offset
         return targetDate.minusDays(cycleOffset)
     }
 
     /**
-     * Determines the [CyclePhase] for a specific date based on historical cycle starts.
-     * This implementation supports recurring cycles using modulo arithmetic.
+     * Determines the [CyclePhase] for a specific date based on historical data.
      * 
      * @param currentDate The date to evaluate.
      * @param cycleStarts List of all valid cycle start dates recorded.
-     * @param cycleLength Total duration of the cycle (standard default is 28).
-     * @param periodLength Duration of the bleeding phase (standard default is 5).
-     * @return The calculated [CyclePhase] for the given date.
+     * @param bleedingDates All recorded bleeding dates (to calculate dynamic period length).
+     * @param cycleLength Total duration of the cycle.
+     * @return The calculated [CyclePhase].
      */
     fun calculatePhase(
         currentDate: LocalDate,
         cycleStarts: List<LocalDate>,
-        cycleLength: Int = 28,
-        periodLength: Int = 5
+        bleedingDates: List<LocalDate>,
+        cycleLength: Int = 28
     ): CyclePhase {
         if (cycleStarts.isEmpty()) return CyclePhase.NONE
 
         val projectedStart = findProjectedCycleStart(currentDate, cycleStarts, cycleLength)
 
-        // Calculate cycle day relative to the projected start (1-indexed)
-        val cycleDay = ChronoUnit.DAYS.between(projectedStart, currentDate).toInt() + 1
+        // 1. Calculate current cycle's bleeding length
+        // Find bleeding days belonging to the cycle starting at projectedStart
+        val periodLength = countConsecutiveBleedingDays(projectedStart, bleedingDates)
 
-        // Biological standard: Ovulation is ~14 days before the NEXT period.
+        // 2. Calculate cycle day relative to the projected start (1-indexed)
+        val daysDiff = ChronoUnit.DAYS.between(projectedStart, currentDate).toInt()
+        val cycleDay = daysDiff + 1
+
+        // 3. Determine Phase using biologically accurate markers
+        // Ovulation is roughly 14 days BEFORE the next period starts.
         val ovulationDay = cycleLength - 14
         
         return when (cycleDay) {
@@ -95,5 +91,27 @@ object CyclePhaseCalculator {
             in (ovulationDay + 2)..cycleLength -> CyclePhase.LUTEA
             else -> CyclePhase.NONE
         }
+    }
+
+    /**
+     * Counts how many consecutive days of bleeding exist starting from [startDate].
+     */
+    private fun countConsecutiveBleedingDays(startDate: LocalDate, bleedingDates: List<LocalDate>): Int {
+        var count = 0
+        var current = startDate
+        
+        // We look for a continuous streak starting from the cycle start.
+        // If the user hasn't logged anything for the current cycle yet, we assume a default of 5 for prediction colors
+        // OR we can return 0 and let the "when" block handle it.
+        // However, the user said "quiere que se adapte a los días de sangrado que indique la persona".
+        
+        val bleedingSet = bleedingDates.toSet()
+        while (bleedingSet.contains(current)) {
+            count++
+            current = current.plusDays(1)
+        }
+        
+        // Default to 5 if no logs are present for this specific cycle yet (to show placeholder colors)
+        return if (count == 0) 5 else count
     }
 }

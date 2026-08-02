@@ -57,14 +57,18 @@ fun CalendarScreen(
     val scrollState = rememberScrollState()
     var isDaySelected by remember { mutableStateOf(false) }
 
-    // Dynamic days calculation based on uiState.currentMonth and uiState.cycleStarts
-    val dayStates = remember(uiState.currentMonth, uiState.cycleStarts) {
+    // Dynamic days calculation based on uiState.currentMonth, uiState.cycleStarts and uiState.symptoms
+    val dayStates = remember(uiState.currentMonth, uiState.cycleStarts, uiState.symptoms) {
         val daysList = mutableListOf<DayState?>()
         val firstOfMonth = uiState.currentMonth.atDay(1)
         val firstDayOfWeek = firstOfMonth.dayOfWeek.value 
         
         // Monday as first column (1=Mon, 7=Sun)
         repeat(firstDayOfWeek - 1) { daysList.add(null) }
+
+        val bleedingDates = uiState.symptoms.values
+            .filter { it.isBleeding }
+            .map { LocalDate.parse(it.date) }
 
         val daysInMonth = uiState.currentMonth.lengthOfMonth()
         for (day in 1..daysInMonth) {
@@ -74,6 +78,7 @@ fun CalendarScreen(
             val phase = CyclePhaseCalculator.calculatePhase(
                 currentDate = date,
                 cycleStarts = uiState.cycleStarts,
+                bleedingDates = bleedingDates,
                 cycleLength = uiState.averageCycleLength
             )
             
