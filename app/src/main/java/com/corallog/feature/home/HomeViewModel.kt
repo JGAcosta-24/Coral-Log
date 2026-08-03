@@ -16,7 +16,7 @@ import kotlinx.coroutines.flow.stateIn
 
 /**
  * ViewModel for the Home Screen.
- * Coordinates cycle status calculation and symptoms display (HU-04, 05, 06).
+ * Coordinates cycle status calculation using the DNA Chain Engine.
  */
 class HomeViewModel(
     private val calendarRepository: CalendarRepository,
@@ -33,13 +33,9 @@ class HomeViewModel(
     ) { bleedingDatesStr: List<String>, avgLength: Int, prefLastDate: String? ->
         
         val bleedingDates = bleedingDatesStr.map { LocalDate.parse(it) }
-        val cycleStarts = CyclePhaseCalculator.calculateAllCycleStarts(bleedingDates)
-
-        // 1. Baseline Anchor
         val seedDate = prefLastDate?.let { LocalDate.parse(it) }
-        val allPotentialStarts = (cycleStarts + seedDate).filterNotNull().distinct().sorted()
         
-        if (allPotentialStarts.isEmpty()) {
+        if (seedDate == null) {
             HomeUiState.Success(
                 daysStatus = DaysStatus.NoData,
                 currentPhase = CyclePhase.NONE,
@@ -48,29 +44,29 @@ class HomeViewModel(
         } else {
             val today = LocalDate.now()
             
-            // 2. Intelligent Prediction with Global Shifting
-            val currentCycleStart = CyclePhaseCalculator.findProjectedCycleStart(
+            // 1. Get the current cycle info from the DNA Chain Engine
+            val currentCycleInfo = CyclePhaseCalculator.getCycleInfoForDate(
                 targetDate = today,
-                cycleStarts = allPotentialStarts,
+                seedDate = seedDate,
                 bleedingDates = bleedingDates,
                 avgLength = avgLength
             )
             
-            val periodLen = countConsecutiveBleedingDays(currentCycleStart, bleedingDates)
-            val cycleShift = Math.max(0, periodLen - 5)
-            val effectiveCycleLen = avgLength + cycleShift
-            
-            var nextPeriodDate = currentCycleStart.plusDays(effectiveCycleLen.toLong())
-
             val isBleedingToday = bleedingDates.any { it.isEqual(today) }
             
+            var nextPeriodDate: LocalDate
+            
             if (isBleedingToday) {
-                // If bleeding today, countdown is to the start of the NEXT month
-                nextPeriodDate = currentCycleStart.plusDays(effectiveCycleLen.toLong())
-            } else if (nextPeriodDate.isBefore(today)) {
-                // Delay logic for real logs
-            } else if (currentCycleStart.isAfter(today)) {
-                nextPeriodDate = currentCycleStart
+                // Scenario: Period in progress. Target is the start of the NEXT chain link.
+                nextPeriodDate = currentCycleInfo.endDate.plusDays(1)
+            } else {
+                // Scenario: Normal countdown. Target is the start of THIS cycle (if in future) 
+                // or the NEXT cycle start.
+                if (currentCycleInfo.startDate.isAfter(today)) {
+                    nextPeriodDate = currentCycleInfo.startDate
+                } else {
+                    nextPeriodDate = currentCycleInfo.endDate.plusDays(1)
+                }
             }
 
             val daysDiff = ChronoUnit.DAYS.between(today, nextPeriodDate).toInt()
@@ -81,10 +77,11 @@ class HomeViewModel(
                 else -> DaysStatus.Delay(-daysDiff)
             }
 
-            // 3. Current Phase
+            // 2. Calculate Current Phase
+            val cycleStarts = CyclePhaseCalculator.calculateAllCycleStarts(bleedingDates)
             val currentPhase = CyclePhaseCalculator.calculatePhase(
                 currentDate = today,
-                cycleStarts = allPotentialStarts,
+                cycleStarts = (cycleStarts + seedDate).distinct(),
                 bleedingDates = bleedingDates,
                 cycleLength = avgLength
             )
@@ -103,17 +100,6 @@ class HomeViewModel(
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = HomeUiState.Loading
     )
-
-    private fun countConsecutiveBleedingDays(startDate: LocalDate, bleedingDates: List<LocalDate>): Int {
-        var count = 0
-        var current = startDate
-        val bleedingSet = bleedingDates.toSet()
-        while (bleedingSet.contains(current)) {
-            count++
-            current = current.plusDays(1)
-        }
-        return count
-    }
 
     private fun getSymptomsForPhase(phase: CyclePhase): List<Int> {
         return when (phase) {
