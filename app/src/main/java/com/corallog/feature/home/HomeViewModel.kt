@@ -35,11 +35,11 @@ class HomeViewModel(
         val bleedingDates = bleedingDatesStr.map { LocalDate.parse(it) }
         val cycleStarts = CyclePhaseCalculator.calculateAllCycleStarts(bleedingDates)
 
-        // 1. Baseline Anchor (Either real log or onboarding seed)
+        // 1. Baseline Anchor
         val seedDate = prefLastDate?.let { LocalDate.parse(it) }
-        val referencePoint = cycleStarts.lastOrNull() ?: seedDate
+        val allPotentialStarts = (cycleStarts + seedDate).filterNotNull().distinct().sorted()
         
-        if (referencePoint == null) {
+        if (allPotentialStarts.isEmpty()) {
             HomeUiState.Success(
                 daysStatus = DaysStatus.NoData,
                 currentPhase = CyclePhase.NONE,
@@ -47,40 +47,30 @@ class HomeViewModel(
             )
         } else {
             val today = LocalDate.now()
-            val allPotentialStarts = (cycleStarts + referencePoint).distinct().sorted()
             
-            // 2. UNIVERSAL RELATIVE PREDICTION
-            // We find the cycle start that contains "Today" using circular logic.
+            // 2. Intelligent Prediction with Global Shifting
             val currentCycleStart = CyclePhaseCalculator.findProjectedCycleStart(
                 targetDate = today,
                 cycleStarts = allPotentialStarts,
-                cycleLength = avgLength
+                bleedingDates = bleedingDates,
+                avgLength = avgLength
             )
-
-            // Special Logic: Check if today is part of an ACTIVE bleeding phase
-            val isBleedingToday = bleedingDates.any { it.isEqual(today) }
-            val lastRealLog = cycleStarts.lastOrNull()
             
-            var nextPeriodDate: LocalDate
+            val periodLen = countConsecutiveBleedingDays(currentCycleStart, bleedingDates)
+            val cycleShift = Math.max(0, periodLen - 5)
+            val effectiveCycleLen = avgLength + cycleShift
+            
+            var nextPeriodDate = currentCycleStart.plusDays(effectiveCycleLen.toLong())
+
+            val isBleedingToday = bleedingDates.any { it.isEqual(today) }
             
             if (isBleedingToday) {
-                // If the user is currently bleeding, the target is the NEXT cycle
-                nextPeriodDate = currentCycleStart.plusDays(avgLength.toLong())
-            } else if (lastRealLog != null && lastRealLog.isBefore(today)) {
-                // Tracking mode: check for delays
-                val predictedNextFromReal = lastRealLog.plusDays(avgLength.toLong())
-                nextPeriodDate = predictedNextFromReal
-            } else {
-                // Onboarding or Future Prediction
-                nextPeriodDate = currentCycleStart.plusDays(avgLength.toLong())
-                
-                if (currentCycleStart.isEqual(today)) {
-                    nextPeriodDate = today
-                }
-                
-                if (currentCycleStart.isAfter(today)) {
-                    nextPeriodDate = currentCycleStart
-                }
+                // If bleeding today, countdown is to the start of the NEXT month
+                nextPeriodDate = currentCycleStart.plusDays(effectiveCycleLen.toLong())
+            } else if (nextPeriodDate.isBefore(today)) {
+                // Delay logic for real logs
+            } else if (currentCycleStart.isAfter(today)) {
+                nextPeriodDate = currentCycleStart
             }
 
             val daysDiff = ChronoUnit.DAYS.between(today, nextPeriodDate).toInt()
@@ -91,7 +81,7 @@ class HomeViewModel(
                 else -> DaysStatus.Delay(-daysDiff)
             }
 
-            // 3. Calculate Current Phase (HU-05)
+            // 3. Current Phase
             val currentPhase = CyclePhaseCalculator.calculatePhase(
                 currentDate = today,
                 cycleStarts = allPotentialStarts,
@@ -99,7 +89,6 @@ class HomeViewModel(
                 cycleLength = avgLength
             )
 
-            // 4. Map Symptoms (HU-06)
             val symptoms = getSymptomsForPhase(currentPhase)
 
             HomeUiState.Success(
@@ -114,6 +103,17 @@ class HomeViewModel(
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = HomeUiState.Loading
     )
+
+    private fun countConsecutiveBleedingDays(startDate: LocalDate, bleedingDates: List<LocalDate>): Int {
+        var count = 0
+        var current = startDate
+        val bleedingSet = bleedingDates.toSet()
+        while (bleedingSet.contains(current)) {
+            count++
+            current = current.plusDays(1)
+        }
+        return count
+    }
 
     private fun getSymptomsForPhase(phase: CyclePhase): List<Int> {
         return when (phase) {

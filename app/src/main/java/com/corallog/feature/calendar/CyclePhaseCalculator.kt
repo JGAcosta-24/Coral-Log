@@ -6,13 +6,12 @@ import java.time.temporal.ChronoUnit
 
 /**
  * Logic engine for calculating menstrual cycle phases.
- * Refactored for biological accuracy: Constant Luteal Phase & Progressive Activation.
+ * Enhanced with "Chain Projection": long periods push all future cycles forward.
  */
 object CyclePhaseCalculator {
 
     /**
      * Identifies all valid cycle start dates from a list of bleeding dates.
-     * A new cycle starts if a bleeding day is >= 21 days from the last valid start.
      */
     fun calculateAllCycleStarts(bleedingDates: List<LocalDate>): List<LocalDate> {
         if (bleedingDates.isEmpty()) return emptyList()
@@ -36,31 +35,48 @@ object CyclePhaseCalculator {
     }
 
     /**
-     * Finds the projected start date of the cycle that contains [targetDate].
+     * Iteratively projects cycle starts to find the one containing [targetDate].
+     * This handles the "pushing" effect of long periods across multiple months.
      */
     fun findProjectedCycleStart(
         targetDate: LocalDate,
         cycleStarts: List<LocalDate>,
-        cycleLength: Int
+        bleedingDates: List<LocalDate>,
+        avgLength: Int
     ): LocalDate {
-        val referenceDate = cycleStarts.minByOrNull { 
-            Math.abs(ChronoUnit.DAYS.between(it, targetDate)) 
-        } ?: targetDate
+        if (cycleStarts.isEmpty()) return targetDate
 
-        val daysDiff = ChronoUnit.DAYS.between(referenceDate, targetDate)
-        val cycleOffset = ((daysDiff % cycleLength) + cycleLength) % cycleLength
-        
-        return targetDate.minusDays(cycleOffset)
+        // 1. Find the first anchor point (oldest or latest start)
+        val latestRealStart = cycleStarts.filter { !it.isAfter(targetDate) }.maxOrNull()
+
+        if (latestRealStart != null) {
+            // Project FORWARD from the latest real start using iterative math
+            var currentStart: LocalDate = latestRealStart
+            while (true) {
+                val periodLen = countConsecutiveBleedingDays(currentStart, bleedingDates)
+                // SHIFT RULE: Every day of bleeding above 5 pushes the cycle length
+                val cycleShift = Math.max(0, periodLen - 5)
+                val effectiveLen = avgLength + cycleShift
+                
+                val nextStart = currentStart.plusDays(effectiveLen.toLong())
+                if (nextStart.isAfter(targetDate)) {
+                    return currentStart
+                }
+                currentStart = nextStart
+            }
+        } else {
+            // Project BACKWARD from the first real start
+            val firstRealStart = cycleStarts.minOrNull()!!
+            var currentStart: LocalDate = firstRealStart
+            while (currentStart.isAfter(targetDate)) {
+                currentStart = currentStart.minusDays(avgLength.toLong())
+            }
+            return currentStart
+        }
     }
 
     /**
-     * Determines the [CyclePhase] for a specific date based on historical data.
-     * 
-     * @param currentDate The date to evaluate.
-     * @param cycleStarts List of all valid cycle start dates recorded.
-     * @param bleedingDates All recorded bleeding dates (to calculate dynamic period length).
-     * @param cycleLength Total duration of the cycle.
-     * @return The calculated [CyclePhase].
+     * Determines the [CyclePhase] for a specific date based on chain projection.
      */
     fun calculatePhase(
         currentDate: LocalDate,
@@ -70,50 +86,63 @@ object CyclePhaseCalculator {
     ): CyclePhase {
         if (cycleStarts.isEmpty()) return CyclePhase.NONE
 
-        val projectedStart = findProjectedCycleStart(currentDate, cycleStarts, cycleLength)
+        // 1. Identify current cycle start using the iterative engine
+        val projectedStart = findProjectedCycleStart(currentDate, cycleStarts, bleedingDates, cycleLength)
+        
+        // 2. Analyze the current cycle's logs
+        val periodLengthFromLogs = countConsecutiveBleedingDays(projectedStart, bleedingDates)
+        val hasRealLogs = periodLengthFromLogs > 0
+        
+        // 3. SHIFTING LOGIC: Determine effective cycle length
+        // We push the end of the cycle if the period is longer than 5 days.
+        val cycleShift = Math.max(0, periodLengthFromLogs - 5)
+        val effectiveCycleLength = cycleLength + cycleShift
 
-        // 1. Calculate current cycle's bleeding length
-        val periodLength = countConsecutiveBleedingDays(projectedStart, bleedingDates)
-
-        // 2. Calculate cycle day relative to the projected start (1-indexed)
+        // 4. Calculate cycle day (1-indexed)
         val daysDiff = ChronoUnit.DAYS.between(projectedStart, currentDate).toInt()
         val cycleDay = daysDiff + 1
 
-        // 3. PROGRESSIVE ACTIVATION LOGIC (Sprint 2/3 Update)
-        // If the user has not logged at least 5 days of bleeding, 
-        // we only show the MENSTRUAL phase (Red). The rest of the month remains clean.
-        val isCycleActive = periodLength >= 5
+        // 5. GLOBAL ACTIVATION CHECK
+        // If the user has logged at least 5 days in ANY cycle, unlock future predictions.
+        // We calculate max period length across all known real starts.
+        val maxHistoricalPeriod = cycleStarts.map { countConsecutiveBleedingDays(it, bleedingDates) }.maxOrNull() ?: 0
+        val isAppActivated = maxHistoricalPeriod >= 5
+        
+        // Local activation for current cycle
+        val isThisCycleActive = periodLengthFromLogs >= 5
 
-        // Biological standard: Ovulation is ~14 days BEFORE the next period starts.
-        val ovulationDay = cycleLength - 14
+        // 6. Leader's Algorithm: Back-calculate Ovulation
+        val ovulationDay = effectiveCycleLength - 14
         
         return when {
-            // Menstrual phase is always shown if within range
-            cycleDay in 1..periodLength -> CyclePhase.MENSTRUAL
+            // RED: Always show logs. For future, show 5-day placeholder if app is activated.
+            cycleDay in 1..periodLengthFromLogs -> CyclePhase.MENSTRUAL
             
-            // Other phases are only revealed once cycle is "Active" (5+ days logged)
-            !isCycleActive -> CyclePhase.NONE
+            // Placeholder for future cycles (only if app is "Activated")
+            !hasRealLogs && isAppActivated && cycleDay in 1..5 -> CyclePhase.MENSTRUAL
+
+            // Hide other phases if threshold not met for THIS cycle
+            !isThisCycleActive && hasRealLogs -> CyclePhase.NONE
             
-            cycleDay in (periodLength + 1) until ovulationDay -> CyclePhase.FOLICULAR
+            // Hide future predictions if app not activated yet
+            !isAppActivated && !hasRealLogs -> CyclePhase.NONE
+
+            // Full Dynamic Layout
+            cycleDay in (Math.max(periodLengthFromLogs, 5) + 1) until ovulationDay -> CyclePhase.FOLICULAR
             cycleDay in ovulationDay..(ovulationDay + 1) -> CyclePhase.OVULACION
-            cycleDay in (ovulationDay + 2)..cycleLength -> CyclePhase.LUTEA
+            cycleDay in (ovulationDay + 2)..effectiveCycleLength -> CyclePhase.LUTEA
             else -> CyclePhase.NONE
         }
     }
 
-    /**
-     * Counts how many consecutive days of bleeding exist starting from [startDate].
-     */
     private fun countConsecutiveBleedingDays(startDate: LocalDate, bleedingDates: List<LocalDate>): Int {
         var count = 0
         var current = startDate
         val bleedingSet = bleedingDates.toSet()
-        
         while (bleedingSet.contains(current)) {
             count++
             current = current.plusDays(1)
         }
-        
         return count
     }
 }

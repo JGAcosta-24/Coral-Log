@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.YearMonth
+import java.time.temporal.ChronoUnit
 
 /**
  * ViewModel for the Calendar feature.
@@ -77,6 +78,20 @@ class CalendarViewModel(
             
             // Sync identified cycles to the database (Sprint 2/3 requirement)
             syncCyclesToDatabase(cycleStarts)
+
+            // Dynamic Average Calculation:
+            // Calculate the actual average length from historical cycles
+            if (cycleStarts.size >= 2) {
+                val durations = mutableListOf<Long>()
+                for (i in 0 until cycleStarts.size - 1) {
+                    val d = ChronoUnit.DAYS.between(cycleStarts[i], cycleStarts[i + 1])
+                    if (d in 21..40) durations.add(d)
+                }
+                if (durations.isNotEmpty()) {
+                    val avg = durations.average().toInt()
+                    prefsRepository.saveAverageCycleLength(avg)
+                }
+            }
 
             _uiState.update { state ->
                 state.copy(cycleStarts = cycleStarts)
