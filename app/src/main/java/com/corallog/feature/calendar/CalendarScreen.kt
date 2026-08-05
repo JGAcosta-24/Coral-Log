@@ -24,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.corallog.R
 import com.corallog.data.CyclePhase
 import com.corallog.ui.theme.*
@@ -53,7 +54,7 @@ data class DayState(
 fun CalendarScreen(
     viewModel: CalendarViewModel = koinViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val scrollState = rememberScrollState()
     var isDaySelected by remember { mutableStateOf(false) }
 
@@ -66,21 +67,12 @@ fun CalendarScreen(
         // Monday as first column (1=Mon, 7=Sun)
         repeat(firstDayOfWeek - 1) { daysList.add(null) }
 
-        val bleedingDates = uiState.symptoms.values
-            .filter { it.isBleeding }
-            .map { LocalDate.parse(it.date) }
-
         val daysInMonth = uiState.currentMonth.lengthOfMonth()
         for (day in 1..daysInMonth) {
             val date = uiState.currentMonth.atDay(day)
             
-            // HU-03: Real phase calculation based on all historical cycle starts
-            val phase = CyclePhaseCalculator.calculatePhase(
-                currentDate = date,
-                cycleStarts = uiState.cycleStarts,
-                bleedingDates = bleedingDates,
-                cycleLength = uiState.averageCycleLength
-            )
+            // O(1) LOOKUP from the pre-calculated phase map
+            val phase = uiState.phaseMap[date] ?: CyclePhase.NONE
             
             daysList.add(
                 DayState(

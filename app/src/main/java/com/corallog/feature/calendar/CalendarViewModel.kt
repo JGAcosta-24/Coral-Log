@@ -3,18 +3,23 @@ package com.corallog.feature.calendar
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.corallog.data.CycleEntity
+import com.corallog.data.CyclePhase
 import com.corallog.data.SymptomEntity
 import com.corallog.data.UserPreferencesRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.temporal.ChronoUnit
 
 /**
  * ViewModel for the Calendar feature.
- * Manages calendar navigation and high-precision adaptive cycle logic.
+ * Optimized for performance: Optimistic UI, Debounced calculations, and Immutable state.
  */
+@OptIn(FlowPreview::class)
 class CalendarViewModel(
     private val repository: CalendarRepository,
     private val prefsRepository: UserPreferencesRepository
@@ -23,51 +28,79 @@ class CalendarViewModel(
     private val _uiState = MutableStateFlow(CalendarUiState())
     val uiState: StateFlow<CalendarUiState> = _uiState.asStateFlow()
 
-    init {
-        // Real-time synchronization:
-        // Combine bleeding dates and user preferences into a single UI update trigger
-        combine(
-            repository.observeAllBleedingDates(),
-            prefsRepository.averageCycleLengthFlow,
-            prefsRepository.lastPeriodDateFlow
-        ) { bleedingDatesStr, avgLength, seedDateStr ->
-            refreshCycleData(bleedingDatesStr, avgLength, seedDateStr)
-        }.launchIn(viewModelScope)
+    // Local-First "Ground Truth" for zero-latency interactions
+    private var localBleedingDates = mutableSetOf<LocalDate>()
+    private var lastSeedDate: LocalDate? = null
 
-        // Initial month load
-        loadSymptomsForMonth(_uiState.value.currentMonth)
+    init {
+        // 1. Initial Data Fetch (One-time or very infrequent)
+        viewModelScope.launch {
+            repository.observeAllBleedingDates().first().let { list ->
+                localBleedingDates.addAll(list.map { LocalDate.parse(it) })
+            }
+            prefsRepository.lastPeriodDateFlow.first()?.let { 
+                lastSeedDate = LocalDate.parse(it) 
+            }
+            triggerFullSync()
+        }
+
+        // 2. Background Sync Pipeline (Metrics, DB Persistence, Average Calculation)
+        // This is debounced to avoid thrashing the DB during rapid interaction
+        repository.observeAllBleedingDates()
+            .drop(1) // Skip initial load
+            .debounce(500)
+            .onEach { 
+                refreshHistoricalData() 
+            }
+            .launchIn(viewModelScope)
+        
+        prefsRepository.averageCycleLengthFlow
+            .onEach { length ->
+                _uiState.update { it.copy(averageCycleLength = length) }
+                triggerFullSync()
+            }
+            .launchIn(viewModelScope)
     }
 
-    private fun refreshCycleData(bleedingDatesStr: List<String>, avgLength: Int, seedDateStr: String?) {
-        val bleedingDates = bleedingDatesStr.map { LocalDate.parse(it) }
-        val seedDate = seedDateStr?.let { LocalDate.parse(it) }
+    /**
+     * Recalculates the entire UI state synchronously in memory.
+     * Call this after any local change for instant UI feedback.
+     */
+    private fun triggerFullSync() {
+        val bleedingDates = localBleedingDates.toList()
+        val currentMonth = _uiState.value.currentMonth
+        val avgLength = _uiState.value.averageCycleLength
 
-        // 1. Identify real cycle starts based on the 21-day rule
         val recordedStarts = CyclePhaseCalculator.calculateAllCycleStarts(bleedingDates)
-        
-        // 2. Sync real cycles to the database (for metrics)
-        viewModelScope.launch { syncCyclesToDatabase(recordedStarts) }
+        val allStarts = (recordedStarts + listOfNotNull(lastSeedDate)).distinct().sorted()
 
-        // 3. DNA Chain Anchor Management: Combine recorded starts with the Onboarding Seed
-        val allStarts = (recordedStarts + listOfNotNull(seedDate)).distinct().sorted()
+        val calculatedMap = CyclePhaseCalculator.calculatePhaseMap(
+            visibleMonth = currentMonth,
+            cycleStarts = allStarts,
+            bleedingDates = bleedingDates,
+            avgLength = avgLength
+        )
 
         _uiState.update { state ->
             state.copy(
                 cycleStarts = allStarts,
-                averageCycleLength = avgLength
+                phaseMap = calculatedMap.toMap(), // Absolute immutability check
+                isLoading = false
             )
         }
     }
 
-    fun onMonthChange(newMonth: YearMonth) {
-        _uiState.update { it.copy(currentMonth = newMonth) }
-        loadSymptomsForMonth(newMonth)
+    private suspend fun refreshHistoricalData() {
+        withContext(Dispatchers.Default) {
+            val bleedingDates = localBleedingDates.toList().sorted()
+            val recordedStarts = CyclePhaseCalculator.calculateAllCycleStarts(bleedingDates)
+            syncCyclesToDatabase(recordedStarts)
+        }
     }
 
-    fun onDateSelected(date: LocalDate) {
-        _uiState.update { it.copy(selectedDate = date) }
-    }
-
+    /**
+     * Toggles a bleeding day with LOCAL-FIRST logic for absolute zero latency.
+     */
     fun onSaveSymptom(
         date: LocalDate,
         isBleeding: Boolean,
@@ -75,6 +108,17 @@ class CalendarViewModel(
         crampIntensity: Int,
         clotLevel: Int = 0
     ) {
+        // 1. UPDATE LOCAL TRUTH IMMEDIATELY
+        if (isBleeding) {
+            localBleedingDates.add(date)
+        } else {
+            localBleedingDates.remove(date)
+        }
+
+        // 2. TRIGGER SYNC UI INSTANTLY
+        triggerFullSync()
+
+        // 3. PERSIST IN BACKGROUND
         viewModelScope.launch {
             if (isBleeding) {
                 val symptom = SymptomEntity(
@@ -88,8 +132,17 @@ class CalendarViewModel(
             } else {
                 repository.deleteSymptomByDate(date.toString())
             }
-            // Logic is automatically refreshed via the 'combine' flow in init
         }
+    }
+
+    fun onMonthChange(newMonth: YearMonth) {
+        _uiState.update { it.copy(currentMonth = newMonth) }
+        triggerFullSync() // Immediate recalculation for the new month view
+        loadSymptomsForMonth(newMonth)
+    }
+
+    fun onDateSelected(date: LocalDate) {
+        _uiState.update { it.copy(selectedDate = date) }
     }
 
     private suspend fun syncCyclesToDatabase(identifiedStarts: List<LocalDate>) {
@@ -121,4 +174,5 @@ class CalendarViewModel(
             }
         }
     }
+
 }
