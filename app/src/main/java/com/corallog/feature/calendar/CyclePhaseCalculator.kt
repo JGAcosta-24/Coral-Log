@@ -6,7 +6,8 @@ import java.time.temporal.ChronoUnit
 
 /**
  * Logic engine for calculating menstrual cycle phases.
- * Refactored for "Infinite DNA Chain" logic: shifts propagate across the entire timeline.
+ * Implements a truly adaptive "DNA Chain": each cycle is a unique link, 
+ * and shifts propagate forward to maintain biological accuracy.
  */
 object CyclePhaseCalculator {
 
@@ -14,11 +15,13 @@ object CyclePhaseCalculator {
         val startDate: LocalDate,
         val endDate: LocalDate,
         val periodLength: Int,
+        val effectiveCycleLength: Int,
         val isFuturePrediction: Boolean
     )
 
     /**
      * Identifies all valid cycle start dates from a list of bleeding dates.
+     * Rule: A new cycle only starts if bleeding is detected at least 21 days from the last start.
      */
     fun calculateAllCycleStarts(bleedingDates: List<LocalDate>): List<LocalDate> {
         if (bleedingDates.isEmpty()) return emptyList()
@@ -42,26 +45,47 @@ object CyclePhaseCalculator {
     }
 
     /**
-     * Iterates from the [seedDate] to find the cycle that contains or follows [targetDate].
-     * This handles the "domino effect" of shifting across months.
+     * Builds the cycle chain starting from the earliest anchor and finds the cycle containing [targetDate].
+     * This handles the "pushing" effect of long periods across multiple months.
      */
     fun getCycleInfoForDate(
         targetDate: LocalDate,
-        seedDate: LocalDate,
+        cycleStarts: List<LocalDate>, // Includes Onboarding Seed + Real Starts
         bleedingDates: List<LocalDate>,
         avgLength: Int
     ): CycleInfo {
-        var currentStart = seedDate
+        if (cycleStarts.isEmpty()) {
+            // Fallback to today if no seed, but normally cycleStarts should have at least the anchor.
+            return CycleInfo(targetDate, targetDate.plusDays(avgLength.toLong() - 1), 5, avgLength, true)
+        }
+
+        val sortedStarts = cycleStarts.distinct().sorted()
         val bleedingSet = bleedingDates.toSet()
 
-        // 1. Forward Projection Loop
-        // We move forward until we find the cycle that covers targetDate.
+        // 1. Iterate through REAL recorded cycles (Fixed Links)
+        // A link is fixed if we know when the NEXT cycle started.
+        for (i in 0 until sortedStarts.size - 1) {
+            val currentStart = sortedStarts[i]
+            val nextStart = sortedStarts[i + 1]
+            val currentEnd = nextStart.minusDays(1)
+            
+            if (!targetDate.isBefore(currentStart) && !targetDate.isAfter(currentEnd)) {
+                val periodLen = countConsecutiveBleedingDays(currentStart, bleedingSet)
+                val totalLen = ChronoUnit.DAYS.between(currentStart, nextStart).toInt()
+                return CycleInfo(currentStart, currentEnd, periodLen, totalLen, false)
+            }
+        }
+
+        // 2. Project FORWARD from the LATEST real start (Adaptive Projection Chain)
+        var currentStart = sortedStarts.last()
         while (true) {
             val periodLen = countConsecutiveBleedingDays(currentStart, bleedingSet)
             
-            // SHIFTING: Every day above 5 pushes the whole timeline forward
-            val shift = Math.max(0, periodLen - 5)
-            val cycleDuration = avgLength + shift
+            // DYNAMIC SHIFT RULE: Every day of bleeding above 5 pushes the whole timeline forward.
+            // Minimum requirement: Period + 1 day gap + 14 days Luteal = Period + 15.
+            val minRequired = if (periodLen > 0) periodLen + 15 else 5 + 15
+            val cycleDuration = Math.max(avgLength, minRequired)
+            
             val currentEnd = currentStart.plusDays(cycleDuration.toLong() - 1)
             val nextStart = currentStart.plusDays(cycleDuration.toLong())
 
@@ -69,27 +93,27 @@ object CyclePhaseCalculator {
                 return CycleInfo(
                     startDate = currentStart,
                     endDate = currentEnd,
-                    periodLength = periodLen,
+                    periodLength = if (periodLen > 0) periodLen else 5, // Default 5 for predictions
+                    effectiveCycleLength = cycleDuration,
                     isFuturePrediction = periodLen == 0
                 )
             }
             
             if (nextStart.isAfter(targetDate)) {
-                // If the next cycle starts after our target, the target belongs to the current link
-                return CycleInfo(currentStart, currentEnd, periodLen, periodLen == 0)
+                return CycleInfo(currentStart, currentEnd, periodLen, cycleDuration, periodLen == 0)
             }
             
             currentStart = nextStart
             
-            // Guard: stop projecting if we are too far in the future
+            // Performance/Safety guard (project up to 5 years)
             if (currentStart.isAfter(targetDate.plusYears(5))) break
         }
         
-        return CycleInfo(currentStart, currentStart.plusDays(avgLength.toLong() - 1), 0, true)
+        return CycleInfo(currentStart, currentStart.plusDays(avgLength.toLong() - 1), 5, avgLength, true)
     }
 
     /**
-     * Determines the [CyclePhase] for a specific date using DNA Chain logic.
+     * Determines the [CyclePhase] for a specific date based on the adaptive DNA Chain.
      */
     fun calculatePhase(
         currentDate: LocalDate,
@@ -97,10 +121,12 @@ object CyclePhaseCalculator {
         bleedingDates: List<LocalDate>,
         cycleLength: Int = 28
     ): CyclePhase {
+        // RULE 0: Manual Override. Any day marked as bleeding is ALWAYS Red.
+        if (bleedingDates.any { it.isEqual(currentDate) }) return CyclePhase.MENSTRUAL
+
         if (cycleStarts.isEmpty()) return CyclePhase.NONE
         
-        val seedDate = cycleStarts.minOrNull()!!
-        val info = getCycleInfoForDate(currentDate, seedDate, bleedingDates, cycleLength)
+        val info = getCycleInfoForDate(currentDate, cycleStarts, bleedingDates, cycleLength)
         
         val cycleDay = ChronoUnit.DAYS.between(info.startDate, currentDate).toInt() + 1
         
@@ -108,31 +134,31 @@ object CyclePhaseCalculator {
         val isAppActivated = isGlobalAppActivated(cycleStarts, bleedingDates)
         
         val isThisCycleActive = info.periodLength >= 5
+        // Show predictions if this cycle is active OR if the app was activated in the past (Infinite Future)
         val showPredictions = isThisCycleActive || (isAppActivated && info.isFuturePrediction)
 
-        val totalLen = ChronoUnit.DAYS.between(info.startDate, info.endDate).toInt() + 1
-        val ovulationDay = totalLen - 14
+        // LEADER'S ALGORITHM: Back-calculate everything from the end
+        // Ovulation is always exactly 14 days BEFORE the end of the cycle.
+        val ovulationDay = info.effectiveCycleLength - 14
 
         return when {
-            // RED: Show real logs or a 5-day placeholder for future months
-            cycleDay in 1..info.periodLength -> CyclePhase.MENSTRUAL
-            
-            info.isFuturePrediction && isAppActivated && cycleDay in 1..5 -> CyclePhase.MENSTRUAL
+            // RED: Real logs or prediction placeholder
+            cycleDay in 1..info.periodLength -> {
+                if (info.isFuturePrediction && !isAppActivated) CyclePhase.NONE
+                else CyclePhase.MENSTRUAL
+            }
 
-            // PROGRESSIVE ACTIVATION: Hide predictions until threshold met at least once
+            // PROGRESSIVE ACTIVATION: Hide other phases until 5-day threshold met
             !showPredictions -> CyclePhase.NONE
 
-            // Full Dynamic Layout (Centric to end of cycle)
-            cycleDay in (Math.max(info.periodLength, 5) + 1) until ovulationDay -> CyclePhase.FOLICULAR
+            // Full Dynamic Layout
+            cycleDay in (info.periodLength + 1) until ovulationDay -> CyclePhase.FOLICULAR
             cycleDay == ovulationDay -> CyclePhase.OVULACION
-            cycleDay > ovulationDay && cycleDay <= totalLen -> CyclePhase.LUTEA
+            cycleDay > ovulationDay && cycleDay <= info.effectiveCycleLength -> CyclePhase.LUTEA
             else -> CyclePhase.NONE
         }
     }
 
-    /**
-     * Checks if the user has EVER achieved a 5-day streak in any recorded cycle.
-     */
     private fun isGlobalAppActivated(cycleStarts: List<LocalDate>, bleedingDates: List<LocalDate>): Boolean {
         val bleedingSet = bleedingDates.toSet()
         for (start in cycleStarts) {

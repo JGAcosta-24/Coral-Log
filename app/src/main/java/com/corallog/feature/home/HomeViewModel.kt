@@ -16,7 +16,7 @@ import kotlinx.coroutines.flow.stateIn
 
 /**
  * ViewModel for the Home Screen.
- * Coordinates cycle status calculation using the DNA Chain Engine.
+ * Coordinates cycle status calculation using the high-precision DNA Chain Engine.
  */
 class HomeViewModel(
     private val calendarRepository: CalendarRepository,
@@ -44,32 +44,37 @@ class HomeViewModel(
         } else {
             val today = LocalDate.now()
             
-            // 1. Get the current cycle info from the DNA Chain Engine
+            // 0. Build the unified anchor list
+            val recordedStarts = CyclePhaseCalculator.calculateAllCycleStarts(bleedingDates)
+            val allStarts = (recordedStarts + seedDate).distinct().sorted()
+
+            // 1. Get current cycle info from the DNA Chain Engine
             val currentCycleInfo = CyclePhaseCalculator.getCycleInfoForDate(
                 targetDate = today,
-                seedDate = seedDate,
+                cycleStarts = allStarts,
                 bleedingDates = bleedingDates,
                 avgLength = avgLength
             )
             
             val isBleedingToday = bleedingDates.any { it.isEqual(today) }
             
-            var nextPeriodDate: LocalDate
+            var targetNextStart: LocalDate
             
             if (isBleedingToday) {
-                // Scenario: Period in progress. Target is the start of the NEXT chain link.
-                nextPeriodDate = currentCycleInfo.endDate.plusDays(1)
+                // If bleeding today, target is the start of the NEXT chain link
+                // which is exactly one link away from the start of this one.
+                targetNextStart = currentCycleInfo.endDate.plusDays(1)
             } else {
-                // Scenario: Normal countdown. Target is the start of THIS cycle (if in future) 
-                // or the NEXT cycle start.
+                // Not bleeding: target is either THIS cycle's start (if it hasn't happened yet)
+                // or the start of the NEXT cycle link.
                 if (currentCycleInfo.startDate.isAfter(today)) {
-                    nextPeriodDate = currentCycleInfo.startDate
+                    targetNextStart = currentCycleInfo.startDate
                 } else {
-                    nextPeriodDate = currentCycleInfo.endDate.plusDays(1)
+                    targetNextStart = currentCycleInfo.endDate.plusDays(1)
                 }
             }
 
-            val daysDiff = ChronoUnit.DAYS.between(today, nextPeriodDate).toInt()
+            val daysDiff = ChronoUnit.DAYS.between(today, targetNextStart).toInt()
 
             val daysStatus = when {
                 daysDiff > 0 -> DaysStatus.Remaining(daysDiff)
@@ -77,11 +82,10 @@ class HomeViewModel(
                 else -> DaysStatus.Delay(-daysDiff)
             }
 
-            // 2. Calculate Current Phase
-            val cycleStarts = CyclePhaseCalculator.calculateAllCycleStarts(bleedingDates)
+            // 2. Calculate Current Phase using the same engine
             val currentPhase = CyclePhaseCalculator.calculatePhase(
                 currentDate = today,
-                cycleStarts = (cycleStarts + seedDate).distinct(),
+                cycleStarts = allStarts,
                 bleedingDates = bleedingDates,
                 cycleLength = avgLength
             )
@@ -92,7 +96,7 @@ class HomeViewModel(
                 daysStatus = daysStatus,
                 currentPhase = currentPhase,
                 phaseSymptoms = symptoms,
-                predictedDate = nextPeriodDate
+                predictedDate = targetNextStart
             )
         }
     }.stateIn(

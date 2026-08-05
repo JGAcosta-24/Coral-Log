@@ -13,7 +13,7 @@ import java.time.temporal.ChronoUnit
 
 /**
  * ViewModel for the Calendar feature.
- * Manages calendar navigation and symptom logging persistence.
+ * Manages calendar navigation and high-precision adaptive cycle logic.
  */
 class CalendarViewModel(
     private val repository: CalendarRepository,
@@ -24,16 +24,39 @@ class CalendarViewModel(
     val uiState: StateFlow<CalendarUiState> = _uiState.asStateFlow()
 
     init {
-        observePreferences()
-        refreshData()
+        // Real-time synchronization:
+        // Combine bleeding dates and user preferences into a single UI update trigger
+        combine(
+            repository.observeAllBleedingDates(),
+            prefsRepository.averageCycleLengthFlow,
+            prefsRepository.lastPeriodDateFlow
+        ) { bleedingDatesStr, avgLength, seedDateStr ->
+            refreshCycleData(bleedingDatesStr, avgLength, seedDateStr)
+        }.launchIn(viewModelScope)
+
+        // Initial month load
+        loadSymptomsForMonth(_uiState.value.currentMonth)
     }
 
-    private fun observePreferences() {
-        prefsRepository.averageCycleLengthFlow
-            .onEach { length ->
-                _uiState.update { it.copy(averageCycleLength = length) }
-            }
-            .launchIn(viewModelScope)
+    private fun refreshCycleData(bleedingDatesStr: List<String>, avgLength: Int, seedDateStr: String?) {
+        val bleedingDates = bleedingDatesStr.map { LocalDate.parse(it) }
+        val seedDate = seedDateStr?.let { LocalDate.parse(it) }
+
+        // 1. Identify real cycle starts based on the 21-day rule
+        val recordedStarts = CyclePhaseCalculator.calculateAllCycleStarts(bleedingDates)
+        
+        // 2. Sync real cycles to the database (for metrics)
+        viewModelScope.launch { syncCyclesToDatabase(recordedStarts) }
+
+        // 3. DNA Chain Anchor Management: Combine recorded starts with the Onboarding Seed
+        val allStarts = (recordedStarts + listOfNotNull(seedDate)).distinct().sorted()
+
+        _uiState.update { state ->
+            state.copy(
+                cycleStarts = allStarts,
+                averageCycleLength = avgLength
+            )
+        }
     }
 
     fun onMonthChange(newMonth: YearMonth) {
@@ -65,44 +88,10 @@ class CalendarViewModel(
             } else {
                 repository.deleteSymptomByDate(date.toString())
             }
-            refreshData()
+            // Logic is automatically refreshed via the 'combine' flow in init
         }
     }
 
-    private fun refreshData() {
-        viewModelScope.launch {
-            val bleedingDates = repository.getAllBleedingDates()
-                .map { LocalDate.parse(it) }
-
-            val cycleStarts = CyclePhaseCalculator.calculateAllCycleStarts(bleedingDates)
-            
-            // Sync identified cycles to the database (Sprint 2/3 requirement)
-            syncCyclesToDatabase(cycleStarts)
-
-            // Dynamic Average Calculation:
-            // Calculate the actual average length from historical cycles
-            if (cycleStarts.size >= 2) {
-                val durations = mutableListOf<Long>()
-                for (i in 0 until cycleStarts.size - 1) {
-                    val d = ChronoUnit.DAYS.between(cycleStarts[i], cycleStarts[i + 1])
-                    if (d in 21..40) durations.add(d)
-                }
-                if (durations.isNotEmpty()) {
-                    val avg = durations.average().toInt()
-                    prefsRepository.saveAverageCycleLength(avg)
-                }
-            }
-
-            _uiState.update { state ->
-                state.copy(cycleStarts = cycleStarts)
-            }
-            loadSymptomsForMonth(_uiState.value.currentMonth)
-        }
-    }
-
-    /**
-     * Syncs identified cycle starts to the Room Database.
-     */
     private suspend fun syncCyclesToDatabase(identifiedStarts: List<LocalDate>) {
         val existingCycles = repository.getAllCycles().first()
         val existingStarts = existingCycles.map { it.startDate }
