@@ -49,31 +49,13 @@ class MetricsViewModel(
         // Rule: Sick days must not pollute flow and cramp metrics
         val healthySymptoms = symptoms.filter { !it.hasIllness }
 
-        // 1. Identify cycle starts dynamically (Regla de los 21 días centralizada)
-        val bleedingDates = symptoms.filter { it.isBleeding }
-            .map { LocalDate.parse(it.date) }
-            .sorted()
-        val cycleStarts = CyclePhaseCalculator.calculateAllCycleStarts(bleedingDates)
+        // 1. Cycle duration using shared logic
+        val avgDuration = CyclePhaseCalculator.calculateAverageCycleDuration(symptoms)
 
-        // HU-10: Need at least 2 cycle starts to have 1 closed cycle
-        if (cycleStarts.size < 3) {
+        // HU-10: Need at least 2 cycles to have metrics
+        if (avgDuration == null) {
             return MetricsUiState(hasEnoughData = false, isLoading = false)
         }
-
-        // HU-07: Average cycle duration with Outlier Exclusion (Illness & Range)
-        val durations = cycleStarts.zipWithNext { start, end ->
-            val hasIllnessInCycle = symptoms.any { symptom ->
-                val date = LocalDate.parse(symptom.date)
-                (date == start || date.isAfter(start)) && date.isBefore(end) && symptom.hasIllness
-            }
-            val duration = ChronoUnit.DAYS.between(start, end).toInt()
-            
-            if (duration in 21..40 && !hasIllnessInCycle) duration else null
-        }.filterNotNull()
-
-        val avgDuration = if (durations.isNotEmpty()) {
-            durations.average().roundToInt()
-        } else null
 
         // HU-08: Flow & Clot Moda (last 6 months, excluding sick days)
         val sixMonthsAgo = LocalDate.now().minusMonths(6)
@@ -101,7 +83,7 @@ class MetricsViewModel(
             dominantFlowLevelRes = dominantFlowRes,
             dominantClotLevelRes = dominantClotRes,
             averageCrampLevelRes = avgCrampsLabelRes,
-            hasEnoughData = durations.size >= 2,
+            hasEnoughData = true,
             isLoading = false
         )
     }

@@ -51,6 +51,12 @@ class CalendarRepository(
         symptomDao.getSymptomsInRange(startDate, endDate)
 
     /**
+     * Observes all symptoms recorded.
+     */
+    fun observeAllSymptoms(): Flow<List<SymptomEntity>> =
+        symptomDao.getAllSymptoms()
+
+    /**
      * Retrieves a specific symptom record by date.
      * @param date ISO-8601 formatted date (YYYY-MM-DD).
      * @return The [SymptomEntity] found, or null.

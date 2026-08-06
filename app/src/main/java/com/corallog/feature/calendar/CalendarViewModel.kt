@@ -3,222 +3,196 @@ package com.corallog.feature.calendar
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.corallog.data.CycleEntity
-import com.corallog.data.CyclePhase
 import com.corallog.data.SymptomEntity
 import com.corallog.data.UserPreferencesRepository
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.YearMonth
-import java.time.temporal.ChronoUnit
 
 /**
  * ViewModel for the Calendar feature.
- * Optimized for performance: Optimistic UI, Debounced calculations, and Immutable state.
+ * Optimized for performance: Reactive pipeline and Immutable state.
  */
-@OptIn(FlowPreview::class)
 class CalendarViewModel(
     private val repository: CalendarRepository,
     private val prefsRepository: UserPreferencesRepository
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(CalendarUiState())
-    val uiState: StateFlow<CalendarUiState> = _uiState.asStateFlow()
+    private val _currentMonth = MutableStateFlow(YearMonth.now())
+    private val _selectedDate = MutableStateFlow(LocalDate.now())
 
-    // Local-First "Ground Truth" for zero-latency interactions
-    private var localBleedingDates = mutableSetOf<LocalDate>()
-    private var lastSeedDate: LocalDate? = null
+    // Selected day editing state (local to ViewModel for UX fluidity)
+    private val _editState = MutableStateFlow(EditState())
 
-    init {
-        // 1. Initial Data Fetch (One-time or very infrequent)
-        viewModelScope.launch {
-            repository.observeAllBleedingDates().first().let { list ->
-                localBleedingDates.addAll(list.map { LocalDate.parse(it) })
-            }
-            prefsRepository.lastPeriodDateFlow.first()?.let { 
-                lastSeedDate = LocalDate.parse(it) 
-            }
-            triggerFullSync()
-        }
-
-        // 2. Background Sync Pipeline (Metrics, DB Persistence, Average Calculation)
-        // This is debounced to avoid thrashing the DB during rapid interaction
-        repository.observeAllBleedingDates()
-            .drop(1) // Skip initial load
-            .debounce(500)
-            .onEach { 
-                refreshHistoricalData() 
-            }
-            .launchIn(viewModelScope)
-        
-        prefsRepository.averageCycleLengthFlow
-            .onEach { length ->
-                _uiState.update { it.copy(averageCycleLength = length) }
-                triggerFullSync()
-            }
-            .launchIn(viewModelScope)
-    }
+    private data class EditState(
+        val isBleeding: Boolean = false,
+        val flowLevel: Int = 0,
+        val crampIntensity: Int = 0,
+        val clotLevel: Int = 0,
+        val hasIllness: Boolean = false
+    )
 
     /**
-     * Recalculates the entire UI state synchronously in memory.
-     * Call this after any local change for instant UI feedback.
+     * REACTIVE PIPELINE:
+     * Combines all data sources into a single immutable UI State.
      */
-    private fun triggerFullSync() {
-        val bleedingDates = localBleedingDates.toList()
-        val currentMonth = _uiState.value.currentMonth
-        val avgLength = _uiState.value.averageCycleLength
+    val uiState: StateFlow<CalendarUiState> = combine(
+        _currentMonth,
+        _selectedDate,
+        _editState,
+        repository.observeAllSymptoms(),
+        prefsRepository.lastPeriodDateFlow,
+        prefsRepository.averageCycleLengthFlow
+    ) { params: Array<Any?> ->
+        val currentMonth = params[0] as YearMonth
+        val selectedDate = params[1] as LocalDate
+        val editState = params[2] as EditState
+        val allSymptoms = params[3] as List<SymptomEntity>
+        val prefLastDate = params[4] as String?
+        val prefAvgLength = params[5] as Int
 
-        val recordedStarts = CyclePhaseCalculator.calculateAllCycleStarts(bleedingDates)
-        val allStarts = (recordedStarts + listOfNotNull(lastSeedDate)).distinct().sorted()
+        val bleedingDates = allSymptoms.asSequence().filter { it.isBleeding }.map { LocalDate.parse(it.date) }.toList()
+        val seedDate = prefLastDate?.let { LocalDate.parse(it) }
+        val allStarts = (CyclePhaseCalculator.calculateAllCycleStarts(bleedingDates) + seedDate)
+            .filterNotNull().distinct().sorted()
 
-        val calculatedMap = CyclePhaseCalculator.calculatePhaseMap(
+        val avgCycle = CyclePhaseCalculator.calculateAverageCycleDuration(allSymptoms) ?: prefAvgLength
+        val avgBleeding = CyclePhaseCalculator.calculateAverageBleedingDuration(allSymptoms) ?: 5
+
+        val phaseMap = CyclePhaseCalculator.calculatePhaseMap(
             visibleMonth = currentMonth,
             cycleStarts = allStarts,
-            bleedingDates = bleedingDates,
-            avgLength = avgLength
+            avgCycleLength = avgCycle,
+            avgBleedingLength = avgBleeding
         )
 
-        _uiState.update { state ->
-            state.copy(
-                cycleStarts = allStarts,
-                phaseMap = calculatedMap.toMap(), // Absolute immutability check
-                isLoading = false
-            )
-        }
-    }
+        val symptomsMap = allSymptoms.associateBy { it.date }
 
-private suspend fun refreshHistoricalData() {
-        withContext(Dispatchers.Default) {
-            repository.reconcileCycles()
+        CalendarUiState(
+            currentMonth = currentMonth,
+            selectedDate = selectedDate,
+            symptoms = symptomsMap,
+            cycleStarts = allStarts,
+            phaseMap = phaseMap,
+            averageCycleLength = avgCycle,
+            averageBleedingLength = avgBleeding,
+            selectedIsBleeding = editState.isBleeding,
+            selectedFlowLevel = editState.flowLevel,
+            selectedCrampIntensity = editState.crampIntensity,
+            selectedClotLevel = editState.clotLevel,
+            selectedHasIllness = editState.hasIllness,
+            isLoading = false
+        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = CalendarUiState()
+    )
+
+    init {
+        // Observe changes to selected date and Symptoms to update the EditState
+        viewModelScope.launch {
+            combine(_selectedDate, repository.observeAllSymptoms()) { date, symptoms ->
+                symptoms.find { it.date == date.toString() }
+            }.collect { symptom ->
+                _editState.update { 
+                    it.copy(
+                        isBleeding = symptom?.isBleeding ?: false,
+                        flowLevel = symptom?.flowLevel ?: 0,
+                        crampIntensity = symptom?.crampIntensity ?: 0,
+                        clotLevel = symptom?.clotLevel ?: 0,
+                        hasIllness = symptom?.hasIllness ?: false
+                    )
+                }
+            }
         }
     }
 
     fun onDateSelected(date: LocalDate) {
-        val currentSymptom = _uiState.value.symptoms[date.toString()]
-        _uiState.update { it.copy(
-            selectedDate = date,
-            selectedIsBleeding = currentSymptom?.isBleeding ?: false,
-            selectedFlowLevel = currentSymptom?.flowLevel ?: 0,
-            selectedCrampIntensity = currentSymptom?.crampIntensity ?: 0,
-            selectedClotLevel = currentSymptom?.clotLevel ?: 0,
-            selectedHasIllness = currentSymptom?.hasIllness ?: false
-        ) }
+        _selectedDate.value = date
     }
 
-    /**
-     * Updates the bleeding state and persists immediately.
-     */
+    fun onMonthChange(newMonth: YearMonth) {
+        _currentMonth.value = newMonth
+    }
+
     fun onUpdateBleeding(isBleeding: Boolean) {
-        val date = _uiState.value.selectedDate
-        _uiState.update { it.copy(
-            selectedIsBleeding = isBleeding,
-            // Restrict illness to bleeding days only (HU Polishing)
-            selectedHasIllness = if (!isBleeding) false else it.selectedHasIllness,
-            // Reset levels if not bleeding
-            selectedFlowLevel = if (!isBleeding) 0 else it.selectedFlowLevel,
-            selectedCrampIntensity = if (!isBleeding) 0 else it.selectedCrampIntensity,
-            selectedClotLevel = if (!isBleeding) 0 else it.selectedClotLevel
+        _editState.update { it.copy(
+            isBleeding = isBleeding,
+            hasIllness = if (!isBleeding) false else it.hasIllness,
+            flowLevel = if (!isBleeding) 0 else it.flowLevel,
+            crampIntensity = if (!isBleeding) 0 else it.crampIntensity,
+            clotLevel = if (!isBleeding) 0 else it.clotLevel
         ) }
         
-        // 1. UPDATE LOCAL TRUTH IMMEDIATELY
-        if (isBleeding) {
-            localBleedingDates.add(date)
-        } else {
-            localBleedingDates.remove(date)
-        }
-
-        // 2. TRIGGER SYNC UI INSTANTLY
-        triggerFullSync()
-        
-        // 3. PERSIST ATOMICALLY
         persistSymptom(
-            date = date,
+            date = _selectedDate.value,
             isBleeding = isBleeding,
-            flow = _uiState.value.selectedFlowLevel,
-            cramps = _uiState.value.selectedCrampIntensity,
-            clots = _uiState.value.selectedClotLevel,
-            ill = _uiState.value.selectedHasIllness
+            flow = _editState.value.flowLevel,
+            cramps = _editState.value.crampIntensity,
+            clots = _editState.value.clotLevel,
+            ill = _editState.value.hasIllness
         )
     }
 
-    /**
-     * Updates the flow level state and persists immediately.
-     */
     fun onUpdateFlow(level: Int) {
-        val date = _uiState.value.selectedDate
-        _uiState.update { it.copy(selectedFlowLevel = level) }
+        _editState.update { it.copy(flowLevel = level) }
         persistSymptom(
-            date = date,
-            isBleeding = _uiState.value.selectedIsBleeding,
+            date = _selectedDate.value,
+            isBleeding = _editState.value.isBleeding,
             flow = level,
-            cramps = _uiState.value.selectedCrampIntensity,
-            clots = _uiState.value.selectedClotLevel,
-            ill = _uiState.value.selectedHasIllness
+            cramps = _editState.value.crampIntensity,
+            clots = _editState.value.clotLevel,
+            ill = _editState.value.hasIllness
         )
     }
 
-    /**
-     * Updates the cramp intensity state and persists immediately.
-     */
     fun onUpdateCramps(intensity: Int) {
-        val date = _uiState.value.selectedDate
-        _uiState.update { it.copy(selectedCrampIntensity = intensity) }
+        _editState.update { it.copy(crampIntensity = intensity) }
         persistSymptom(
-            date = date,
-            isBleeding = _uiState.value.selectedIsBleeding,
-            flow = _uiState.value.selectedFlowLevel,
+            date = _selectedDate.value,
+            isBleeding = _editState.value.isBleeding,
+            flow = _editState.value.flowLevel,
             cramps = intensity,
-            clots = _uiState.value.selectedClotLevel,
-            ill = _uiState.value.selectedHasIllness
+            clots = _editState.value.clotLevel,
+            ill = _editState.value.hasIllness
         )
     }
 
-    /**
-     * Updates the clot level state and persists immediately.
-     */
     fun onUpdateClots(level: Int) {
-        val date = _uiState.value.selectedDate
-        _uiState.update { it.copy(selectedClotLevel = level) }
+        _editState.update { it.copy(clotLevel = level) }
         persistSymptom(
-            date = date,
-            isBleeding = _uiState.value.selectedIsBleeding,
-            flow = _uiState.value.selectedFlowLevel,
-            cramps = _uiState.value.selectedCrampIntensity,
+            date = _selectedDate.value,
+            isBleeding = _editState.value.isBleeding,
+            flow = _editState.value.flowLevel,
+            cramps = _editState.value.crampIntensity,
             clots = level,
-            ill = _uiState.value.selectedHasIllness
+            ill = _editState.value.hasIllness
         )
     }
 
-    /**
-     * Toggles the illness state and persists immediately.
-     */
     fun onToggleIllness(isIll: Boolean) {
-        val date = _uiState.value.selectedDate
-        _uiState.update { it.copy(selectedHasIllness = isIll) }
+        _editState.update { it.copy(hasIllness = isIll) }
         persistSymptom(
-            date = date,
-            isBleeding = _uiState.value.selectedIsBleeding,
-            flow = _uiState.value.selectedFlowLevel,
-            cramps = _uiState.value.selectedCrampIntensity,
-            clots = _uiState.value.selectedClotLevel,
+            date = _selectedDate.value,
+            isBleeding = _editState.value.isBleeding,
+            flow = _editState.value.flowLevel,
+            cramps = _editState.value.crampIntensity,
+            clots = _editState.value.clotLevel,
             ill = isIll
         )
     }
 
-    /**
-     * Persists the symptom state to the database for a specific date.
-     * Blinded against race conditions by using captured parameters.
-     */
     private fun persistSymptom(date: LocalDate, isBleeding: Boolean, flow: Int, cramps: Int, clots: Int, ill: Boolean) {
+        if (date.isAfter(LocalDate.now())) {
+            Log.w("CoralLog_Security", "Blocked attempt to log symptoms in the future: $date")
+            return
+        }
+
         viewModelScope.launch {
             val dateIso = date.toString()
-            Log.d("CoralLog_Audit", "Persisting day $dateIso: bleeding=$isBleeding, flow=$flow, cramps=$cramps, clots=$clots, illness=$ill")
-            
-            if (isBleeding || ill || flow > 0 || cramps > 0 || clots > 0) {
+            if ((isBleeding || ill || flow > 0 || cramps > 0 || clots > 0)) {
                 val symptom = SymptomEntity(
                     date = dateIso,
                     isBleeding = isBleeding,
@@ -228,36 +202,9 @@ private suspend fun refreshHistoricalData() {
                     hasIllness = ill
                 )
                 repository.upsertSymptom(symptom)
-                Log.d("CoralLog_Audit", "Day $dateIso UPSERTED successfully")
             } else {
                 repository.deleteSymptomByDate(dateIso)
-                Log.d("CoralLog_Audit", "Day $dateIso DELETED (All fields empty)")
             }
         }
     }
-
-    fun onMonthChange(newMonth: YearMonth) {
-        _uiState.update { it.copy(currentMonth = newMonth) }
-        triggerFullSync() // Immediate recalculation for the new month view
-        loadSymptomsForMonth(newMonth)
-    }
-
-    private fun loadSymptomsForMonth(month: YearMonth) {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
-            val start = month.atDay(1).toString()
-            val end = month.atEndOfMonth().toString()
-            
-            repository.getSymptomsInRange(start, end).collect { symptomList ->
-                val symptomMap = symptomList.associateBy { it.date }
-                _uiState.update { 
-                    it.copy(
-                        symptoms = symptomMap,
-                        isLoading = false
-                    ) 
-                }
-            }
-        }
-    }
-
 }

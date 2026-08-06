@@ -141,9 +141,19 @@ fun CalendarScreen(
                         LegendItem(color = LocalPhaseColors.current.ovulacion, label = stringResource(R.string.phase_ovulation))
                         LegendItem(color = LocalPhaseColors.current.lutea, label = stringResource(R.string.phase_luteal))
                     }
+                    
+                    Text(
+                        text = stringResource(R.string.calendar_prediction_disclaimer),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 8.dp),
+                        textAlign = TextAlign.Justify
+                    )
                 }
             } else {
                 // Inline logging section (HU-02 updated)
+                val isFuture = uiState.selectedDate.isAfter(LocalDate.now())
+                
                 LoggingSectionCard(
                     selectedDate = uiState.selectedDate,
                     isBleeding = uiState.selectedIsBleeding,
@@ -151,6 +161,7 @@ fun CalendarScreen(
                     crampIntensity = uiState.selectedCrampIntensity,
                     clotLevel = uiState.selectedClotLevel,
                     hasIllness = uiState.selectedHasIllness,
+                    enabled = !isFuture,
                     onUpdateBleeding = { viewModel.onUpdateBleeding(it) },
                     onUpdateFlow = { viewModel.onUpdateFlow(it) },
                     onUpdateCramps = { viewModel.onUpdateCramps(it) },
@@ -340,6 +351,7 @@ fun LoggingSectionCard(
     crampIntensity: Int,
     clotLevel: Int,
     hasIllness: Boolean,
+    enabled: Boolean = true,
     onUpdateBleeding: (Boolean) -> Unit,
     onUpdateFlow: (Int) -> Unit,
     onUpdateCramps: (Int) -> Unit,
@@ -368,21 +380,49 @@ fun LoggingSectionCard(
                 onClick = { /* Consume click */ }
             ),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
+        colors = CardDefaults.cardColors(
+            containerColor = if (enabled) MaterialTheme.colorScheme.surfaceContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        )
     ) {
         Column(
             modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text(
-                text = stringResource(
-                    R.string.registration_for, 
-                    selectedDate.dayOfMonth, 
-                    selectedDate.month.getDisplayName(TextStyle.FULL, Locale.getDefault())
-                ),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(
+                        R.string.registration_for, 
+                        selectedDate.dayOfMonth, 
+                        selectedDate.month.getDisplayName(TextStyle.FULL, Locale.getDefault())
+                    ),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                
+                if (!enabled) {
+                    Icon(
+                        imageVector = Icons.Default.Lock,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+
+            if (!enabled) {
+                Text(
+                    text = stringResource(R.string.future_date_warning),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center
+                )
+            }
 
             // Checkbox for bleeding
             Row(
@@ -392,7 +432,8 @@ fun LoggingSectionCard(
             ) {
                 Checkbox(
                     checked = isBleeding,
-                    onCheckedChange = { onUpdateBleeding(it) },
+                    onCheckedChange = { if (enabled) onUpdateBleeding(it) },
+                    enabled = enabled,
                     colors = CheckboxDefaults.colors(
                         checkedColor = LocalPhaseColors.current.menstrual,
                         checkmarkColor = MaterialTheme.colorScheme.onSurface
@@ -401,12 +442,12 @@ fun LoggingSectionCard(
                 Icon(
                     imageVector = Icons.Default.WaterDrop,
                     contentDescription = null,
-                    tint = LocalPhaseColors.current.menstrual,
+                    tint = if (enabled) LocalPhaseColors.current.menstrual else LocalPhaseColors.current.menstrual.copy(alpha = 0.4f),
                     modifier = Modifier.size(24.dp)
                 )
                 Text(
                     text = stringResource(R.string.bleeding_question), 
-                    color = MaterialTheme.colorScheme.onSurface, 
+                    color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
                     style = MaterialTheme.typography.bodyLarge
                 )
             }
@@ -416,7 +457,7 @@ fun LoggingSectionCard(
                 label = stringResource(R.string.flow_label),
                 options = flowOptions,
                 selectedIndex = flowLevel - 1,
-                enabled = isBleeding,
+                enabled = isBleeding && enabled,
                 onSelectionChange = { index -> onUpdateFlow(index + 1) }
             )
 
@@ -424,7 +465,7 @@ fun LoggingSectionCard(
                 label = stringResource(R.string.cramps_label),
                 options = flowOptions,
                 selectedIndex = crampIntensity - 1,
-                enabled = isBleeding,
+                enabled = isBleeding && enabled,
                 onSelectionChange = { index -> onUpdateCramps(index + 1) }
             )
 
@@ -432,7 +473,7 @@ fun LoggingSectionCard(
                 label = stringResource(R.string.clots_label),
                 options = clotOptions,
                 selectedIndex = clotLevel - 1,
-                enabled = isBleeding,
+                enabled = isBleeding && enabled,
                 onSelectionChange = { index -> onUpdateClots(index + 1) }
             )
 
@@ -453,17 +494,18 @@ fun LoggingSectionCard(
                         Text(
                             text = stringResource(R.string.label_illness),
                             style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
                         )
                         Switch(
                             checked = hasIllness,
-                            onCheckedChange = { onToggleIllness(it) }
+                            onCheckedChange = { if (enabled) onToggleIllness(it) },
+                            enabled = enabled
                         )
                     }
                     Text(
                         text = stringResource(R.string.desc_illness),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
                     )
                 }
             }

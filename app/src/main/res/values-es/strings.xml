@@ -122,4 +122,6 @@
     <string name="label_illness">Enfermedad / Factor externo</string>
     <string name="desc_illness">Este ciclo no se tomará en cuenta para el cálculo de promedios.</string>
     <string name="registration_for">Registro para %1$d de %2$s</string>
+    <string name="future_date_warning">No se pueden registrar datos en fechas futuras</string>
+    <string name="calendar_prediction_disclaimer">La duración promedio del ciclo y del sangrado se calculan basándose en los datos que has registrado. La distribución de las fases futuras en el calendario se predice matemáticamente utilizando estos promedios. Nota: El calendario marca el día pico de ovulación; recuerda que la ventana fértil es más amplia y abarca los 5 días previos y el día posterior a la ovulación.</string>
 </resources>

@@ -6,6 +6,7 @@ import com.corallog.R
 import com.corallog.data.UserPreferencesRepository
 import com.corallog.feature.calendar.CalendarRepository
 import com.corallog.data.CyclePhase
+import com.corallog.data.SymptomEntity
 import com.corallog.feature.calendar.CyclePhaseCalculator
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
@@ -27,14 +28,17 @@ class HomeViewModel(
      * UI State for the Home Screen.
      */
     val uiState: StateFlow<HomeUiState> = combine(
-        calendarRepository.observeAllBleedingDates(),
+        calendarRepository.observeAllSymptoms(),
         prefsRepository.averageCycleLengthFlow,
         prefsRepository.lastPeriodDateFlow
-    ) { bleedingDatesStr: List<String>, avgLength: Int, prefLastDate: String? ->
+    ) { symptoms: List<SymptomEntity>, prefAvgLength: Int, prefLastDate: String? ->
         
-        val bleedingDates = bleedingDatesStr.map { LocalDate.parse(it) }
+        val bleedingDates = symptoms.filter { it.isBleeding }.map { LocalDate.parse(it.date) }
         val seedDate = prefLastDate?.let { LocalDate.parse(it) }
         
+        val avgCycle = CyclePhaseCalculator.calculateAverageCycleDuration(symptoms) ?: prefAvgLength
+        val avgBleeding = CyclePhaseCalculator.calculateAverageBleedingDuration(symptoms) ?: 5
+
         // 0. Identify real starts (manual triggers)
         val recordedStarts = CyclePhaseCalculator.calculateAllCycleStarts(bleedingDates)
         val allStarts = (recordedStarts + seedDate).filterNotNull().distinct().sorted()
@@ -47,51 +51,38 @@ class HomeViewModel(
             )
         } else {
             val today = LocalDate.now()
-            
-            // 1. Get info for Today's cycle (if any)
-            val info = CyclePhaseCalculator.getCycleInfoForDate(
-                targetDate = today,
+            val lastRealStart = allStarts.last()
+
+            // 1. Current Phase using shared logic
+            val currentPhase = CyclePhaseCalculator.calculatePhase(
+                currentDate = today,
                 cycleStarts = allStarts,
-                bleedingDates = bleedingDates,
-                avgLength = avgLength
+                avgCycleLength = avgCycle,
+                avgBleedingLength = avgBleeding
             )
 
-            val isBleedingToday = bleedingDates.any { it.isEqual(today) }
+            // 2. Prediction of Next Cycle
+            // If today is before the last real start (unlikely for prediction, but possible in history)
+            // But usually today is >= lastRealStart.
             
-            var targetNextStart: LocalDate
-            var finalStatus: DaysStatus
-            var currentPhase: CyclePhase = CyclePhase.NONE
-
-            if (info != null) {
-                // Today belongs to an active or predicted cycle link
-                currentPhase = CyclePhaseCalculator.calculatePhase(today, allStarts, bleedingDates, avgLength)
-                targetNextStart = info.endDate.plusDays(1)
-                
-                val daysDiff = ChronoUnit.DAYS.between(today, targetNextStart).toInt()
-                
-                finalStatus = when {
-                    isBleedingToday -> DaysStatus.Remaining(daysDiff) // Shift countdown to next month
-                    daysDiff > 0 -> DaysStatus.Remaining(daysDiff)
-                    daysDiff == 0 -> DaysStatus.Today
-                    else -> DaysStatus.Delay(-daysDiff)
-                }
+            val targetNextStart: LocalDate
+            if (!today.isBefore(lastRealStart)) {
+                val daysSinceLastStart = ChronoUnit.DAYS.between(lastRealStart, today).toInt()
+                val cycleIndex = daysSinceLastStart / avgCycle
+                targetNextStart = lastRealStart.plusDays((cycleIndex + 1L) * avgCycle)
             } else {
-                // Today is OUTSIDE any known cycle span. 
-                // We are "waiting" for Condition B or predicting from the last known cycle.
-                val lastKnownStart = allStarts.last()
-                val lastInfo = CyclePhaseCalculator.getCycleInfoForDate(lastKnownStart, allStarts, bleedingDates, avgLength)
-                
-                targetNextStart = lastInfo?.endDate?.plusDays(1) ?: lastKnownStart.plusDays(avgLength.toLong())
-                
-                val daysDiff = ChronoUnit.DAYS.between(today, targetNextStart).toInt()
-                
-                finalStatus = if (daysDiff < 0) {
-                    DaysStatus.Delay(-daysDiff)
-                } else if (daysDiff == 0) {
-                    DaysStatus.Today
-                } else {
-                    DaysStatus.Remaining(daysDiff)
-                }
+                // Today is in the past relative to the last recorded cycle start.
+                // This shouldn't happen for the main dashboard prediction, but we handle it.
+                val nextStart = allStarts.find { it.isAfter(today) } ?: lastRealStart.plusDays(avgCycle.toLong())
+                targetNextStart = nextStart
+            }
+
+            val daysDiff = ChronoUnit.DAYS.between(today, targetNextStart).toInt()
+            
+            val finalStatus = when {
+                daysDiff == 0 -> DaysStatus.Today
+                daysDiff > 0 -> DaysStatus.Remaining(daysDiff)
+                else -> DaysStatus.Delay(-daysDiff)
             }
 
             HomeUiState.Success(
