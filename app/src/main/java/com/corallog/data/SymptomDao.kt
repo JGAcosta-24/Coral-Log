@@ -49,4 +49,7 @@ interface SymptomDao {
 
     @Query("SELECT * FROM symptoms WHERE isBleeding = 1")
     fun getAllBleedingSymptoms(): Flow<List<SymptomEntity>>
+
+    @Query("UPDATE symptoms SET isBleeding = :isBleeding WHERE date = :date")
+    suspend fun updateBleedingStatus(date: String, isBleeding: Boolean)
 }

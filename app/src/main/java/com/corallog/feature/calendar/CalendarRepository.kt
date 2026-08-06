@@ -1,10 +1,13 @@
 package com.corallog.feature.calendar
 
+import android.util.Log
 import com.corallog.data.CycleDao
 import com.corallog.data.CycleEntity
 import com.corallog.data.SymptomDao
 import com.corallog.data.SymptomEntity
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
+import java.time.LocalDate
 
 /**
  * Repository responsible for coordinating menstrual cycle and symptom data.
@@ -80,4 +83,48 @@ class CalendarRepository(
      */
     fun observeAllBleedingDates(): Flow<List<String>> =
         symptomDao.observeAllBleedingDates()
+
+    /**
+     * Updates only the bleeding status for a specific date.
+     */
+    suspend fun updateBleedingStatus(date: String, isBleeding: Boolean) =
+        symptomDao.updateBleedingStatus(date, isBleeding)
+
+    /**
+     * Synchronizes the cycles table with symptom data applying business rules:
+     * 1. 21-day rule for new cycle starts.
+     * 2. Truncation if a gap is detected or the 10-day bleeding limit is reached.
+     */
+    suspend fun reconcileCycles() {
+        Log.d("CoralLog_Audit", "Starting reconcileCycles()")
+        val bleedingDatesStrings = symptomDao.getAllBleedingDates()
+        val bleedingDates = bleedingDatesStrings.map { LocalDate.parse(it) }
+        val calculatedStarts = CyclePhaseCalculator.calculateAllCycleStarts(bleedingDates)
+        val existingCycles = cycleDao.getAllCycles().first()
+        val bleedingSet = bleedingDatesStrings.toSet()
+
+        // 1. Remove cycles that are no longer valid starts
+        val validStartsIso = calculatedStarts.map { it.toString() }.toSet()
+        existingCycles.forEach { cycle ->
+            if (cycle.startDate !in validStartsIso) {
+                Log.d("CoralLog_Audit", "Deleting invalid cycle start: ${cycle.startDate}")
+                cycleDao.deleteCycle(cycle)
+            }
+        }
+
+        // 2. Insert or Update cycles (Rule 2: Truncation & 10-day limit)
+        calculatedStarts.forEach { start ->
+            val periodEnd = CyclePhaseCalculator.calculateCycleEnd(start, bleedingSet)
+
+            val existing = existingCycles.find { it.startDate == start.toString() }
+            if (existing == null) {
+                Log.d("CoralLog_Audit", "Inserting new cycle: ${start.toString()} to ${periodEnd.toString()}")
+                cycleDao.insertCycle(CycleEntity(startDate = start.toString(), endDate = periodEnd.toString()))
+            } else if (existing.endDate != periodEnd.toString()) {
+                Log.d("CoralLog_Audit", "Updating cycle end: ${start.toString()} now ends at ${periodEnd.toString()}")
+                cycleDao.updateCycle(existing.copy(endDate = periodEnd.toString()))
+            }
+        }
+        Log.d("CoralLog_Audit", "reconcileCycles() completed")
+    }
 }

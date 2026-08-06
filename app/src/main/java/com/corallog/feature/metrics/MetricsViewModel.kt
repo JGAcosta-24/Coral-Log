@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.corallog.R
 import com.corallog.data.SymptomEntity
+import com.corallog.feature.calendar.CyclePhaseCalculator
 import kotlinx.coroutines.flow.*
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
@@ -48,11 +49,11 @@ class MetricsViewModel(
         // Rule: Sick days must not pollute flow and cramp metrics
         val healthySymptoms = symptoms.filter { !it.hasIllness }
 
-        // 1. Identify cycle starts dynamically (Regla de los 21 días)
+        // 1. Identify cycle starts dynamically (Regla de los 21 días centralizada)
         val bleedingDates = symptoms.filter { it.isBleeding }
             .map { LocalDate.parse(it.date) }
             .sorted()
-        val cycleStarts = calculateAllCycleStarts(bleedingDates)
+        val cycleStarts = CyclePhaseCalculator.calculateAllCycleStarts(bleedingDates)
 
         // HU-10: Need at least 2 cycle starts to have 1 closed cycle
         if (cycleStarts.size < 3) {
@@ -103,25 +104,6 @@ class MetricsViewModel(
             hasEnoughData = durations.size >= 2,
             isLoading = false
         )
-    }
-
-    private fun calculateAllCycleStarts(dates: List<LocalDate>): List<LocalDate> {
-        if (dates.isEmpty()) return emptyList()
-
-        val cycleStarts = mutableListOf<LocalDate>()
-        var currentCycleStart: LocalDate = dates[0]
-        cycleStarts.add(currentCycleStart)
-
-        for (i in 1 until dates.size) {
-            val day = dates[i]
-            val daysSinceValidStart = ChronoUnit.DAYS.between(currentCycleStart, day)
-
-            if (daysSinceValidStart >= 21) {
-                currentCycleStart = day
-                cycleStarts.add(currentCycleStart)
-            }
-        }
-        return cycleStarts
     }
 
     private fun getFlowLabelRes(level: Int): Int {

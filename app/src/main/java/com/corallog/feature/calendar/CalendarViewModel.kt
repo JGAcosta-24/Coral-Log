@@ -1,5 +1,6 @@
 package com.corallog.feature.calendar
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.corallog.data.CycleEntity
@@ -92,9 +93,7 @@ class CalendarViewModel(
 
 private suspend fun refreshHistoricalData() {
         withContext(Dispatchers.Default) {
-            val bleedingDates = localBleedingDates.toList().sorted()
-            val recordedStarts = CyclePhaseCalculator.calculateAllCycleStarts(bleedingDates)
-            syncCyclesToDatabase(recordedStarts)
+            repository.reconcileCycles()
         }
     }
 
@@ -114,6 +113,7 @@ private suspend fun refreshHistoricalData() {
      * Updates the bleeding state and persists immediately.
      */
     fun onUpdateBleeding(isBleeding: Boolean) {
+        val date = _uiState.value.selectedDate
         _uiState.update { it.copy(
             selectedIsBleeding = isBleeding,
             // Restrict illness to bleeding days only (HU Polishing)
@@ -123,99 +123,123 @@ private suspend fun refreshHistoricalData() {
             selectedCrampIntensity = if (!isBleeding) 0 else it.selectedCrampIntensity,
             selectedClotLevel = if (!isBleeding) 0 else it.selectedClotLevel
         ) }
-        onSaveSymptom()
-    }
-
-    /**
-     * Updates the flow level state and persists immediately.
-     */
-    fun onUpdateFlow(level: Int) {
-        _uiState.update { it.copy(selectedFlowLevel = level) }
-        onSaveSymptom()
-    }
-
-    /**
-     * Updates the cramp intensity state and persists immediately.
-     */
-    fun onUpdateCramps(intensity: Int) {
-        _uiState.update { it.copy(selectedCrampIntensity = intensity) }
-        onSaveSymptom()
-    }
-
-    /**
-     * Updates the clot level state and persists immediately.
-     */
-    fun onUpdateClots(level: Int) {
-        _uiState.update { it.copy(selectedClotLevel = level) }
-        onSaveSymptom()
-    }
-
-    /**
-     * Toggles the illness state and persists immediately.
-     */
-    fun onToggleIllness(isIll: Boolean) {
-        _uiState.update { it.copy(selectedHasIllness = isIll) }
-        onSaveSymptom()
-    }
-
-    /**
-     * Persists the current temporary state to the database with LOCAL-FIRST logic for absolute zero latency.
-     * Triggered when the user "closes" the logging section or explicitly saves.
-     */
-    fun onSaveSymptom() {
-        // Extraemos los valores del estado (Lógica de Dev)
-        val state = _uiState.value
-        val date = state.selectedDate
-        val isBleeding = state.selectedIsBleeding
-        val flowLevel = state.selectedFlowLevel
-        val crampIntensity = state.selectedCrampIntensity
-        val clotLevel = state.selectedClotLevel
-        val hasIllness = state.selectedHasIllness
-
-        // 1. UPDATE LOCAL TRUTH IMMEDIATELY (Lógica de tu Fix)
+        
+        // 1. UPDATE LOCAL TRUTH IMMEDIATELY
         if (isBleeding) {
             localBleedingDates.add(date)
         } else {
             localBleedingDates.remove(date)
         }
 
-        // 2. TRIGGER SYNC UI INSTANTLY (Lógica de tu Fix)
+        // 2. TRIGGER SYNC UI INSTANTLY
         triggerFullSync()
+        
+        // 3. PERSIST ATOMICALLY
+        persistSymptom(
+            date = date,
+            isBleeding = isBleeding,
+            flow = _uiState.value.selectedFlowLevel,
+            cramps = _uiState.value.selectedCrampIntensity,
+            clots = _uiState.value.selectedClotLevel,
+            ill = _uiState.value.selectedHasIllness
+        )
+    }
 
-        // 3. PERSIST IN BACKGROUND (Lógica de tu Fix)
+    /**
+     * Updates the flow level state and persists immediately.
+     */
+    fun onUpdateFlow(level: Int) {
+        val date = _uiState.value.selectedDate
+        _uiState.update { it.copy(selectedFlowLevel = level) }
+        persistSymptom(
+            date = date,
+            isBleeding = _uiState.value.selectedIsBleeding,
+            flow = level,
+            cramps = _uiState.value.selectedCrampIntensity,
+            clots = _uiState.value.selectedClotLevel,
+            ill = _uiState.value.selectedHasIllness
+        )
+    }
+
+    /**
+     * Updates the cramp intensity state and persists immediately.
+     */
+    fun onUpdateCramps(intensity: Int) {
+        val date = _uiState.value.selectedDate
+        _uiState.update { it.copy(selectedCrampIntensity = intensity) }
+        persistSymptom(
+            date = date,
+            isBleeding = _uiState.value.selectedIsBleeding,
+            flow = _uiState.value.selectedFlowLevel,
+            cramps = intensity,
+            clots = _uiState.value.selectedClotLevel,
+            ill = _uiState.value.selectedHasIllness
+        )
+    }
+
+    /**
+     * Updates the clot level state and persists immediately.
+     */
+    fun onUpdateClots(level: Int) {
+        val date = _uiState.value.selectedDate
+        _uiState.update { it.copy(selectedClotLevel = level) }
+        persistSymptom(
+            date = date,
+            isBleeding = _uiState.value.selectedIsBleeding,
+            flow = _uiState.value.selectedFlowLevel,
+            cramps = _uiState.value.selectedCrampIntensity,
+            clots = level,
+            ill = _uiState.value.selectedHasIllness
+        )
+    }
+
+    /**
+     * Toggles the illness state and persists immediately.
+     */
+    fun onToggleIllness(isIll: Boolean) {
+        val date = _uiState.value.selectedDate
+        _uiState.update { it.copy(selectedHasIllness = isIll) }
+        persistSymptom(
+            date = date,
+            isBleeding = _uiState.value.selectedIsBleeding,
+            flow = _uiState.value.selectedFlowLevel,
+            cramps = _uiState.value.selectedCrampIntensity,
+            clots = _uiState.value.selectedClotLevel,
+            ill = isIll
+        )
+    }
+
+    /**
+     * Persists the symptom state to the database for a specific date.
+     * Blinded against race conditions by using captured parameters.
+     */
+    private fun persistSymptom(date: LocalDate, isBleeding: Boolean, flow: Int, cramps: Int, clots: Int, ill: Boolean) {
         viewModelScope.launch {
-            if (isBleeding || hasIllness) {
+            val dateIso = date.toString()
+            Log.d("CoralLog_Audit", "Persisting day $dateIso: bleeding=$isBleeding, flow=$flow, cramps=$cramps, clots=$clots, illness=$ill")
+            
+            if (isBleeding || ill || flow > 0 || cramps > 0 || clots > 0) {
                 val symptom = SymptomEntity(
-                    date = date.toString(),
+                    date = dateIso,
                     isBleeding = isBleeding,
-                    flowLevel = flowLevel,
-                    crampIntensity = crampIntensity,
-                    clotLevel = clotLevel,
-                    hasIllness = hasIllness
+                    flowLevel = flow,
+                    crampIntensity = cramps,
+                    clotLevel = clots,
+                    hasIllness = ill
                 )
                 repository.upsertSymptom(symptom)
+                Log.d("CoralLog_Audit", "Day $dateIso UPSERTED successfully")
             } else {
-                repository.deleteSymptomByDate(date.toString())
+                repository.deleteSymptomByDate(dateIso)
+                Log.d("CoralLog_Audit", "Day $dateIso DELETED (All fields empty)")
             }
         }
-    } 
+    }
 
     fun onMonthChange(newMonth: YearMonth) {
         _uiState.update { it.copy(currentMonth = newMonth) }
         triggerFullSync() // Immediate recalculation for the new month view
         loadSymptomsForMonth(newMonth)
-    }
-
-    private suspend fun syncCyclesToDatabase(identifiedStarts: List<LocalDate>) {
-        val existingCycles = repository.getAllCycles().first()
-        val existingStarts = existingCycles.map { it.startDate }
-
-        identifiedStarts.forEach { start ->
-            val startIso = start.toString()
-            if (startIso !in existingStarts) {
-                repository.upsertCycle(CycleEntity(startDate = startIso))
-            }
-        }
     }
 
     private fun loadSymptomsForMonth(month: YearMonth) {

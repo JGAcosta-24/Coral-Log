@@ -15,26 +15,54 @@ object CyclePhaseCalculator {
         val startDate: LocalDate,
         val endDate: LocalDate,
         val periodLength: Int,
-        val isUnlocked: Boolean,
         val effectiveCycleLength: Int
     )
 
     /**
-     * Identifies the start of every sequence of consecutive bleeding days.
-     * These are treated as independent anchors for the cycle chain.
+     * Identifies the start of every cycle using the 21-day rule.
+     * A new cycle starts if there is a gap (> 1 day) AND at least 21 days have passed
+     * since the last valid cycle start.
      */
     fun calculateAllCycleStarts(bleedingDates: List<LocalDate>): List<LocalDate> {
         if (bleedingDates.isEmpty()) return emptyList()
         val sortedDates = bleedingDates.sorted()
         val starts = mutableListOf<LocalDate>()
-        
-        starts.add(sortedDates[0])
-        for (i in 1 until sortedDates.size) {
-            if (ChronoUnit.DAYS.between(sortedDates[i - 1], sortedDates[i]) > 1) {
-                starts.add(sortedDates[i])
+
+        var lastValidStart: LocalDate? = null
+
+        for (i in 0 until sortedDates.size) {
+            val current = sortedDates[i]
+            val prev = if (i > 0) sortedDates[i - 1] else null
+
+            val isFirstDate = prev == null
+            val isAfterGap = prev != null && ChronoUnit.DAYS.between(prev, current) > 1
+
+            if (isFirstDate || isAfterGap) {
+                if (lastValidStart == null || ChronoUnit.DAYS.between(lastValidStart, current) >= 21) {
+                    starts.add(current)
+                    lastValidStart = current
+                }
             }
         }
         return starts
+    }
+
+    /**
+     * Calculates the end date of a menstrual period starting at [start].
+     * Rules:
+     * 1. Continues as long as there are consecutive bleeding days.
+     * 2. Truncates if a gap is detected.
+     * 3. Absolute limit of 10 days.
+     */
+    fun calculateCycleEnd(start: LocalDate, bleedingDates: Set<String>): LocalDate {
+        var periodEnd = start
+        // Limit to 10 days max (periodEnd - start < 9 days means day 10 is max)
+        while (bleedingDates.contains(periodEnd.plusDays(1).toString()) &&
+            ChronoUnit.DAYS.between(start, periodEnd.plusDays(1)) < 10
+        ) {
+            periodEnd = periodEnd.plusDays(1)
+        }
+        return periodEnd
     }
 
     /**
@@ -97,7 +125,6 @@ object CyclePhaseCalculator {
                 startDate = cycleStart,
                 endDate = cycleEnd,
                 periodLength = periodLen,
-                isUnlocked = periodLen >= 5,
                 effectiveCycleLength = effectiveLength
             )
         }
@@ -114,28 +141,20 @@ object CyclePhaseCalculator {
         bleedingDates: List<LocalDate>,
         avgLength: Int
     ): CyclePhase {
-        val bleedingSet = bleedingDates.toSet()
-
-        // Rule 0: Manual logs are always MENSTRUAL
-        if (bleedingSet.contains(currentDate)) return CyclePhase.MENSTRUAL
-
         val info = getCycleInfoForDate(currentDate, cycleStarts, bleedingDates, avgLength) ?: return CyclePhase.NONE
 
-        // Rule 2: 5-day threshold to unlock non-menstrual phases
-        if (info.isUnlocked) {
-            val cycleDay = ChronoUnit.DAYS.between(info.startDate, currentDate).toInt() + 1
-            val ovulationDay = info.effectiveCycleLength - 14
-            
-            return when {
-                // Predictions: only show if they are NOT menstrual (Rule 1: no auto-painting red)
-                cycleDay in (info.periodLength + 1) until ovulationDay -> CyclePhase.FOLICULAR
-                cycleDay == ovulationDay -> CyclePhase.OVULACION
-                cycleDay > ovulationDay && cycleDay <= info.effectiveCycleLength -> CyclePhase.LUTEA
-                else -> CyclePhase.NONE
-            }
-        }
+        val cycleDay = ChronoUnit.DAYS.between(info.startDate, currentDate).toInt() + 1
+        val ovulationDay = info.effectiveCycleLength - 14
         
-        return CyclePhase.NONE
+        return when {
+            // Rule 1: Menstrual phase is dictated by the actual bleeding periodLength of the cycle
+            cycleDay <= info.periodLength -> CyclePhase.MENSTRUAL
+            // Prediction phases:
+            cycleDay < ovulationDay -> CyclePhase.FOLICULAR
+            cycleDay == ovulationDay -> CyclePhase.OVULACION
+            cycleDay > ovulationDay && cycleDay <= info.effectiveCycleLength -> CyclePhase.LUTEA
+            else -> CyclePhase.NONE
+        }
     }
 
     private fun countConsecutiveBleedingDays(startDate: LocalDate, bleedingSet: Set<LocalDate>): Int {

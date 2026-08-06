@@ -42,7 +42,8 @@ data class DayState(
     val dayOfMonth: Int,
     val date: LocalDate,
     val phase: CyclePhase,
-    val isToday: Boolean = false
+    val isToday: Boolean = false,
+    val isBleeding: Boolean = false
 )
 
 /**
@@ -73,13 +74,15 @@ fun CalendarScreen(
             
             // O(1) LOOKUP from the pre-calculated phase map
             val phase = uiState.phaseMap[date] ?: CyclePhase.NONE
+            val symptom = uiState.symptoms[date.toString()]
             
             daysList.add(
                 DayState(
                     dayOfMonth = day,
                     date = date,
                     phase = phase,
-                    isToday = date == LocalDate.now()
+                    isToday = date == LocalDate.now(),
+                    isBleeding = symptom?.isBleeding ?: false
                 )
             )
         }
@@ -297,11 +300,26 @@ fun CalendarCard(
                                             ),
                                         contentAlignment = Alignment.Center
                                     ) {
-                                        Text(
-                                            text = dayState.dayOfMonth.toString(), 
-                                            color = textColor, 
-                                            style = MaterialTheme.typography.titleMedium
-                                        )
+                                        Column(
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            verticalArrangement = Arrangement.Center
+                                        ) {
+                                            Text(
+                                                text = dayState.dayOfMonth.toString(), 
+                                                color = textColor, 
+                                                style = MaterialTheme.typography.titleMedium
+                                            )
+                                            
+                                            // Bleeding Indicator (Dot) - Dynamically themed
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(6.dp)
+                                                    .background(
+                                                        color = if (dayState.isBleeding) LocalPhaseColors.current.menstrual else Color.Transparent,
+                                                        shape = CircleShape
+                                                    )
+                                            )
+                                        }
                                     }
                                 }
                             }
