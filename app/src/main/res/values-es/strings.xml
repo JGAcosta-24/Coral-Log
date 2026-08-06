@@ -55,7 +55,7 @@
     <!-- Onboarding -->
     <string name="onboarding_welcome">Bienvenida a Coral Log</string>
     <string name="onboarding_subtitle">Para darte predicciones precisas, necesitamos unos datos iniciales.</string>
-    <string name="last_period_question">¿Cuándo inició tu última regla?</string>
+    <string name="last_period_question">Selecciona los días de tu último periodo</string>
     <string name="avg_length_question">¿Cuál es la duración promedio de tu ciclo (días)?</string>
     <string name="start_tracking">Empezar Seguimiento</string>
     <string name="select_date">Seleccionar Fecha</string>

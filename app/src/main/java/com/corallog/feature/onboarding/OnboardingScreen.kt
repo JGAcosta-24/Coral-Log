@@ -16,7 +16,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
@@ -28,6 +27,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,15 +38,16 @@ fun OnboardingScreen(
     val scrollState = rememberScrollState()
     val snackbarHostState = remember { SnackbarHostState() }
     
-    var selectedDate by remember { mutableStateOf<LocalDate?>(null) }
+    var startDate by remember { mutableStateOf<LocalDate?>(null) }
+    var endDate by remember { mutableStateOf<LocalDate?>(null) }
+    
     var showDatePicker by remember { mutableStateOf(false) }
     var termsAccepted by remember { mutableStateOf(false) }
     var showPrivacyDialog by remember { mutableStateOf(false) }
     var showTermsDialog by remember { mutableStateOf(false) }
 
-    val datePickerState = rememberDatePickerState(
-        initialSelectedDateMillis = System.currentTimeMillis()
-    )
+    // Use a state for the picker to manage selection
+    val dateRangePickerState = rememberDateRangePickerState()
 
     val termsLabel = stringResource(R.string.terms_of_use)
     val privacyLabel = stringResource(R.string.privacy_policy)
@@ -94,7 +95,7 @@ fun OnboardingScreen(
                     textAlign = TextAlign.Center
                 )
 
-                // Question 1: Last Period
+                // Question 1: Last Period Range
                 Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(
                         text = stringResource(R.string.last_period_question),
@@ -111,10 +112,17 @@ fun OnboardingScreen(
                     ) {
                         Icon(Icons.Default.CalendarToday, contentDescription = null)
                         Spacer(modifier = Modifier.width(12.dp))
-                        Text(
-                            text = selectedDate?.format(DateTimeFormatter.ofPattern("MMM dd, yyyy")) 
-                                ?: stringResource(R.string.select_date)
-                        )
+                        val formatter = DateTimeFormatter.ofPattern("MMM dd, yyyy")
+                        val displayText = when {
+                            startDate != null && endDate != null -> {
+                                "${startDate!!.format(formatter)} - ${endDate!!.format(formatter)}"
+                            }
+                            startDate != null -> {
+                                startDate!!.format(formatter)
+                            }
+                            else -> stringResource(R.string.select_date)
+                        }
+                        Text(text = displayText)
                     }
                 }
 
@@ -169,9 +177,10 @@ fun OnboardingScreen(
 
                 Button(
                     onClick = {
-                        selectedDate?.let { date ->
+                        if (startDate != null && endDate != null) {
                             viewModel.completeOnboarding(
-                                lastPeriodDate = date
+                                startDate = startDate!!,
+                                endDate = endDate!!
                             )
                             onFinished()
                         }
@@ -181,7 +190,7 @@ fun OnboardingScreen(
                         .height(56.dp),
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Primary),
-                    enabled = selectedDate != null && termsAccepted
+                    enabled = startDate != null && endDate != null && termsAccepted
                 ) {
                     Text(
                         text = stringResource(R.string.start_tracking),
@@ -194,19 +203,35 @@ fun OnboardingScreen(
             }
 
             if (showDatePicker) {
+                // Calculation of days in real-time for validation
+                val startMillis = dateRangePickerState.selectedStartDateMillis
+                val endMillis = dateRangePickerState.selectedEndDateMillis
+                val selectedDays = if (startMillis != null && endMillis != null) {
+                    ((endMillis - startMillis) / (24 * 60 * 60 * 1000)).toInt() + 1
+                } else 0
+                
+                val isValidRange = selectedDays in 2..10
+
                 DatePickerDialog(
                     onDismissRequest = { showDatePicker = false },
                     confirmButton = {
-                        TextButton(onClick = {
-                            datePickerState.selectedDateMillis?.let {
-                                // Fix: Use UTC to prevent local time zone offset issues (previous day bug)
-                                selectedDate = Instant.ofEpochMilli(it)
-                                    .atZone(ZoneOffset.UTC)
-                                    .toLocalDate()
-                            }
-                            showDatePicker = false
-                        }) {
-                            Text("OK", color = MaterialTheme.colorScheme.primary)
+                        TextButton(
+                            onClick = {
+                                dateRangePickerState.selectedStartDateMillis?.let { start ->
+                                    startDate = Instant.ofEpochMilli(start)
+                                        .atZone(ZoneOffset.UTC)
+                                        .toLocalDate()
+                                }
+                                dateRangePickerState.selectedEndDateMillis?.let { end ->
+                                    endDate = Instant.ofEpochMilli(end)
+                                        .atZone(ZoneOffset.UTC)
+                                        .toLocalDate()
+                                }
+                                showDatePicker = false
+                            },
+                            enabled = isValidRange
+                        ) {
+                            Text("OK", color = if (isValidRange) MaterialTheme.colorScheme.primary else Color.Gray)
                         }
                     },
                     dismissButton = {
@@ -215,7 +240,68 @@ fun OnboardingScreen(
                         }
                     }
                 ) {
-                    DatePicker(state = datePickerState)
+                    DateRangePicker(
+                        state = dateRangePickerState,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(500.dp),
+                        dateFormatter = remember { DatePickerDefaults.dateFormatter(
+                            yearSelectionSkeleton = "yMMM",
+                            selectedDateSkeleton = "MMMddy",
+                            selectedDateDescriptionSkeleton = "MMMddy"
+                        ) },
+                        title = {
+                            Column(modifier = Modifier.padding(start = 24.dp, top = 16.dp)) {
+                                Text(
+                                    text = "Select range",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                if (startMillis != null && endMillis != null && !isValidRange) {
+                                    Text(
+                                        text = "Please select 2 to 10 days",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.error
+                                    )
+                                }
+                            }
+                        },
+                        headline = {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(start = 24.dp, end = 24.dp, bottom = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                val startText = startMillis?.let {
+                                    Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate()
+                                        .format(DateTimeFormatter.ofPattern("MMM dd"))
+                                } ?: "Start"
+                                
+                                val endText = endMillis?.let {
+                                    Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate()
+                                        .format(DateTimeFormatter.ofPattern("MMM dd"))
+                                } ?: "End"
+                                
+                                Text(
+                                    text = startText,
+                                    style = MaterialTheme.typography.headlineMedium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "-",
+                                    style = MaterialTheme.typography.headlineMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = endText,
+                                    style = MaterialTheme.typography.headlineMedium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+                    )
                 }
             }
         }
