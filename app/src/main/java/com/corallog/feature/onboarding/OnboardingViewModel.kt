@@ -20,7 +20,7 @@ class OnboardingViewModel(
      * Completes the onboarding process by saving preferences and 
      * creating the first bleeding record.
      */
-    fun completeOnboarding(lastPeriodDate: LocalDate, avgLength: Int) {
+    fun completeOnboarding(lastPeriodDate: LocalDate, avgLength: Int = 28) {
         viewModelScope.launch {
             val dateStr = lastPeriodDate.toString()
             

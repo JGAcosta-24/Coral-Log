@@ -16,7 +16,7 @@ import kotlinx.coroutines.flow.stateIn
 
 /**
  * ViewModel for the Home Screen.
- * Coordinates cycle status calculation and symptoms display (HU-04, 05, 06).
+ * Implements "On-Demand" logic: focuses on the current or immediate next cycle.
  */
 class HomeViewModel(
     private val calendarRepository: CalendarRepository,
@@ -33,13 +33,13 @@ class HomeViewModel(
     ) { bleedingDatesStr: List<String>, avgLength: Int, prefLastDate: String? ->
         
         val bleedingDates = bleedingDatesStr.map { LocalDate.parse(it) }
-        val cycleStarts = CyclePhaseCalculator.calculateAllCycleStarts(bleedingDates)
-
-        // 1. Baseline Anchor (Either real log or onboarding seed)
         val seedDate = prefLastDate?.let { LocalDate.parse(it) }
-        val referencePoint = cycleStarts.lastOrNull() ?: seedDate
         
-        if (referencePoint == null) {
+        // 0. Identify real starts (manual triggers)
+        val recordedStarts = CyclePhaseCalculator.calculateAllCycleStarts(bleedingDates)
+        val allStarts = (recordedStarts + seedDate).filterNotNull().distinct().sorted()
+
+        if (allStarts.isEmpty()) {
             HomeUiState.Success(
                 daysStatus = DaysStatus.NoData,
                 currentPhase = CyclePhase.NONE,
@@ -47,70 +47,58 @@ class HomeViewModel(
             )
         } else {
             val today = LocalDate.now()
-            val allPotentialStarts = (cycleStarts + referencePoint).distinct().sorted()
             
-            var nextPeriodDate: LocalDate
-            
-            // 2. UNIVERSAL RELATIVE PREDICTION
-            // We find the cycle start that contains "Today" using circular logic.
-            val currentCycleStart = CyclePhaseCalculator.findProjectedCycleStart(
+            // 1. Get info for Today's cycle (if any)
+            val info = CyclePhaseCalculator.getCycleInfoForDate(
                 targetDate = today,
-                cycleStarts = allPotentialStarts,
-                cycleLength = avgLength
+                cycleStarts = allStarts,
+                bleedingDates = bleedingDates,
+                avgLength = avgLength
             )
 
-            // If we have real logs in the past, and "today" is past the predicted next start from the LAST real log, 
-            // we should show a delay.
-            val lastRealLog = cycleStarts.lastOrNull()
+            val isBleedingToday = bleedingDates.any { it.isEqual(today) }
             
-            if (lastRealLog != null && lastRealLog.isBefore(today)) {
-                val predictedNextFromReal = lastRealLog.plusDays(avgLength.toLong())
-                if (predictedNextFromReal.isBefore(today)) {
-                    // CASE: Delay. User is tracking and missed a period.
-                    nextPeriodDate = predictedNextFromReal
-                } else {
-                    // CASE: Normal tracking.
-                    nextPeriodDate = predictedNextFromReal
+            var targetNextStart: LocalDate
+            var finalStatus: DaysStatus
+            var currentPhase: CyclePhase = CyclePhase.NONE
+
+            if (info != null) {
+                // Today belongs to an active or predicted cycle link
+                currentPhase = CyclePhaseCalculator.calculatePhase(today, allStarts, bleedingDates, avgLength)
+                targetNextStart = info.endDate.plusDays(1)
+                
+                val daysDiff = ChronoUnit.DAYS.between(today, targetNextStart).toInt()
+                
+                finalStatus = when {
+                    isBleedingToday -> DaysStatus.Remaining(daysDiff) // Shift countdown to next month
+                    daysDiff > 0 -> DaysStatus.Remaining(daysDiff)
+                    daysDiff == 0 -> DaysStatus.Today
+                    else -> DaysStatus.Delay(-daysDiff)
                 }
             } else {
-                // CASE: Onboarding or Future Prediction.
-                // We project forward from the "currentCycleStart" to find the next one.
-                nextPeriodDate = currentCycleStart.plusDays(avgLength.toLong())
+                // Today is OUTSIDE any known cycle span. 
+                // We are "waiting" for Condition B or predicting from the last known cycle.
+                val lastKnownStart = allStarts.last()
+                val lastInfo = CyclePhaseCalculator.getCycleInfoForDate(lastKnownStart, allStarts, bleedingDates, avgLength)
                 
-                // If today IS the start day (prediction for today), remaining will be 0.
-                if (currentCycleStart.isEqual(today)) {
-                    nextPeriodDate = today
-                }
+                targetNextStart = lastInfo?.endDate?.plusDays(1) ?: lastKnownStart.plusDays(avgLength.toLong())
                 
-                // If back-projection found a cycle that starts in the future, target that.
-                if (currentCycleStart.isAfter(today)) {
-                    nextPeriodDate = currentCycleStart
+                val daysDiff = ChronoUnit.DAYS.between(today, targetNextStart).toInt()
+                
+                finalStatus = if (daysDiff < 0) {
+                    DaysStatus.Delay(-daysDiff)
+                } else if (daysDiff == 0) {
+                    DaysStatus.Today
+                } else {
+                    DaysStatus.Remaining(daysDiff)
                 }
             }
-
-            val daysDiff = ChronoUnit.DAYS.between(today, nextPeriodDate).toInt()
-
-            val daysStatus = when {
-                daysDiff > 0 -> DaysStatus.Remaining(daysDiff)
-                daysDiff == 0 -> DaysStatus.Today
-                else -> DaysStatus.Delay(-daysDiff)
-            }
-
-            // 3. Calculate Current Phase (HU-05)
-            val currentPhase = CyclePhaseCalculator.calculatePhase(
-                currentDate = today,
-                cycleStarts = allPotentialStarts,
-                cycleLength = avgLength
-            )
-
-            // 4. Map Symptoms (HU-06)
-            val symptoms = getSymptomsForPhase(currentPhase)
 
             HomeUiState.Success(
-                daysStatus = daysStatus,
+                daysStatus = finalStatus,
                 currentPhase = currentPhase,
-                phaseSymptoms = symptoms,
-                predictedDate = nextPeriodDate
+                phaseSymptoms = getSymptomsForPhase(currentPhase),
+                predictedDate = targetNextStart
             )
         }
     }.stateIn(
