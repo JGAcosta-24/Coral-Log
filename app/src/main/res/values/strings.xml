@@ -123,5 +123,5 @@
     <string name="desc_illness">This cycle will be excluded from the average metrics.</string>
     <string name="registration_for">Log for %1$d %2$s</string>
     <string name="future_date_warning">Cannot log data in future dates</string>
-    <string name="calendar_prediction_disclaimer">Average cycle and bleeding duration are calculated based on the data you have recorded. The distribution of future phases in the calendar is mathematically predicted using these averages. Note: The calendar marks the peak ovulation day; remember that the fertile window is broader and spans the 5 days before and the day after ovulation.</string>
+    <string name="calendar_prediction_disclaimer">Average cycle and bleeding duration are calculated based on the data you have recorded.\n\nThe distribution of future phases in the calendar is mathematically predicted using these averages and known standards.\n\nNote: The calendar marks the peak ovulation day; remember that the fertile window is broader and spans the 5 days before and the day after ovulation.</string>
 </resources>
