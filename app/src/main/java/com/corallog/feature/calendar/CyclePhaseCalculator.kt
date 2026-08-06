@@ -39,6 +39,30 @@ object CyclePhaseCalculator {
     }
 
     /**
+     * Finds the projected start date of the cycle that contains [targetDate].
+     * Treats [cycleStarts] as reference points and projects forward/backward using [cycleLength].
+     */
+    fun findProjectedCycleStart(
+        targetDate: LocalDate,
+        cycleStarts: List<LocalDate>,
+        cycleLength: Int
+    ): LocalDate {
+        // 1. Pick the best reference point (closest recorded date)
+        val referenceDate = cycleStarts.minByOrNull { 
+            Math.abs(ChronoUnit.DAYS.between(it, targetDate)) 
+        } ?: targetDate
+
+        // 2. Calculate the difference and the offset within the cycle
+        val daysDiff = ChronoUnit.DAYS.between(referenceDate, targetDate)
+        
+        // Modulo can be negative in Kotlin, so we adjust to always get a positive remainder
+        val cycleOffset = ((daysDiff % cycleLength) + cycleLength) % cycleLength
+        
+        // 3. The projected start is the target date minus the offset
+        return targetDate.minusDays(cycleOffset)
+    }
+
+    /**
      * Determines the [CyclePhase] for a specific date based on historical cycle starts.
      * This implementation supports recurring cycles using modulo arithmetic.
      * 
@@ -54,19 +78,14 @@ object CyclePhaseCalculator {
         cycleLength: Int = 28,
         periodLength: Int = 5
     ): CyclePhase {
-        // Find the most recent cycle start that is on or before the current date
-        val activeCycleStart = cycleStarts
-            .filter { it.isBefore(currentDate) || it.isEqual(currentDate) }
-            .maxOrNull() ?: return CyclePhase.NONE
+        if (cycleStarts.isEmpty()) return CyclePhase.NONE
 
-        // Difference in days (0-indexed internally, but Day 1 of cycle is day 0 here)
-        val daysDiff = ChronoUnit.DAYS.between(activeCycleStart, currentDate).toInt()
-        
-        // Cycle day (1-indexed) using modulo for continuous cycle prediction
-        val cycleDay = (daysDiff % cycleLength) + 1
+        val projectedStart = findProjectedCycleStart(currentDate, cycleStarts, cycleLength)
 
-        // Biological standard: Luteal phase is constant (~14 days before next period)
-        // Ovulation happens around 14 days before the next period starts.
+        // Calculate cycle day relative to the projected start (1-indexed)
+        val cycleDay = ChronoUnit.DAYS.between(projectedStart, currentDate).toInt() + 1
+
+        // Biological standard: Ovulation is ~14 days before the NEXT period.
         val ovulationDay = cycleLength - 14
         
         return when (cycleDay) {

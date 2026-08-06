@@ -21,7 +21,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.corallog.R
 import com.corallog.data.CyclePhase
-import com.corallog.ui.theme.*
+import com.corallog.ui.theme.LocalPhaseColors
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 import org.koin.androidx.compose.koinViewModel
 
 /**
@@ -37,7 +40,7 @@ fun HomeScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Background)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         when (val state = uiState) {
             is HomeUiState.Loading -> {
@@ -69,13 +72,13 @@ private fun HomeContent(state: HomeUiState.Success) {
         Text(
             text = stringResource(R.string.status_title),
             style = MaterialTheme.typography.headlineSmall,
-            color = OnSurface,
+            color = MaterialTheme.colorScheme.onSurface,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.fillMaxWidth()
         )
 
         // Days Countdown Card (HU-04)
-        CountdownCard(state.daysStatus)
+        CountdownCard(state.daysStatus, state.predictedDate)
 
         // Phase Card (HU-05)
         PhaseCard(state.currentPhase)
@@ -90,16 +93,18 @@ private fun HomeContent(state: HomeUiState.Success) {
 }
 
 @Composable
-private fun CountdownCard(status: DaysStatus) {
+private fun CountdownCard(status: DaysStatus, predictedDate: LocalDate?) {
     val backgroundColor = when (status) {
         is DaysStatus.Delay -> MaterialTheme.colorScheme.errorContainer
-        else -> SurfaceContainerLow
+        else -> MaterialTheme.colorScheme.surfaceContainerLow
     }
     
     val contentColor = when (status) {
         is DaysStatus.Delay -> MaterialTheme.colorScheme.onErrorContainer
-        else -> OnSurface
+        else -> MaterialTheme.colorScheme.onSurface
     }
+
+    val dateFormatter = remember { DateTimeFormatter.ofPattern("d 'de' MMMM", Locale.getDefault()) }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -144,6 +149,16 @@ private fun CountdownCard(status: DaysStatus) {
                 color = contentColor.copy(alpha = 0.8f),
                 textAlign = TextAlign.Center
             )
+
+            if (predictedDate != null && status !is DaysStatus.NoData) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = stringResource(R.string.next_period_prediction, predictedDate.format(dateFormatter)),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = contentColor.copy(alpha = 0.6f),
+                    textAlign = TextAlign.Center
+                )
+            }
         }
     }
 }
@@ -169,7 +184,7 @@ private fun PhaseCard(phase: CyclePhase) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = SurfaceContainer)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
     ) {
         Row(
             modifier = Modifier
@@ -191,12 +206,12 @@ private fun PhaseCard(phase: CyclePhase) {
                 Text(
                     text = stringResource(R.string.current_phase_label),
                     style = MaterialTheme.typography.labelMedium,
-                    color = OnSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
                     text = phaseName,
                     style = MaterialTheme.typography.headlineSmall,
-                    color = OnSurface,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -213,7 +228,7 @@ private fun SymptomsSection(symptomResIds: List<Int>) {
         Text(
             text = stringResource(R.string.symptoms_title),
             style = MaterialTheme.typography.titleMedium,
-            color = OnSurface,
+            color = MaterialTheme.colorScheme.onSurface,
             fontWeight = FontWeight.Bold
         )
 
@@ -230,7 +245,7 @@ private fun SymptomChip(text: String) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        color = SurfaceContainerHigh
+        color = MaterialTheme.colorScheme.surfaceContainerHigh
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
@@ -245,7 +260,7 @@ private fun SymptomChip(text: String) {
             Text(
                 text = text,
                 style = MaterialTheme.typography.bodyLarge,
-                color = OnSurface
+                color = MaterialTheme.colorScheme.onSurface
             )
         }
     }

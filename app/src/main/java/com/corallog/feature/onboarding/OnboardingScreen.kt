@@ -23,11 +23,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.corallog.R
-import com.corallog.ui.theme.Background
-import com.corallog.ui.theme.OnSurface
-import com.corallog.ui.theme.OnSurfaceVariant
-import com.corallog.ui.theme.Primary
-import kotlinx.coroutines.launch
+import com.corallog.ui.theme.*
 import org.koin.androidx.compose.koinViewModel
 import java.time.Instant
 import java.time.LocalDate
@@ -40,7 +36,6 @@ fun OnboardingScreen(
     viewModel: OnboardingViewModel = koinViewModel(),
     onFinished: () -> Unit
 ) {
-    val coroutineScope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
     val snackbarHostState = remember { SnackbarHostState() }
     
@@ -48,18 +43,19 @@ fun OnboardingScreen(
     var avgCycleLength by remember { mutableStateOf("28") }
     var showDatePicker by remember { mutableStateOf(false) }
     var termsAccepted by remember { mutableStateOf(false) }
+    var showPrivacyDialog by remember { mutableStateOf(false) }
+    var showTermsDialog by remember { mutableStateOf(false) }
 
     val datePickerState = rememberDatePickerState(
         initialSelectedDateMillis = System.currentTimeMillis()
     )
 
-    val comingSoonMsg = stringResource(R.string.coming_soon, "")
     val termsLabel = stringResource(R.string.terms_of_use)
     val privacyLabel = stringResource(R.string.privacy_policy)
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        containerColor = Background
+        containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
         Box(
             modifier = Modifier
@@ -88,7 +84,7 @@ fun OnboardingScreen(
                 Text(
                     text = stringResource(R.string.onboarding_welcome),
                     style = MaterialTheme.typography.headlineLarge,
-                    color = Primary,
+                    color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Black,
                     textAlign = TextAlign.Center
                 )
@@ -96,7 +92,7 @@ fun OnboardingScreen(
                 Text(
                     text = stringResource(R.string.onboarding_subtitle),
                     style = MaterialTheme.typography.bodyLarge,
-                    color = OnSurfaceVariant,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center
                 )
 
@@ -105,7 +101,7 @@ fun OnboardingScreen(
                     Text(
                         text = stringResource(R.string.last_period_question),
                         style = MaterialTheme.typography.titleMedium,
-                        color = OnSurface,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontWeight = FontWeight.Bold
                     )
                     
@@ -113,7 +109,7 @@ fun OnboardingScreen(
                         onClick = { showDatePicker = true },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Primary)
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary)
                     ) {
                         Icon(Icons.Default.CalendarToday, contentDescription = null)
                         Spacer(modifier = Modifier.width(12.dp))
@@ -129,7 +125,7 @@ fun OnboardingScreen(
                     Text(
                         text = stringResource(R.string.avg_length_question),
                         style = MaterialTheme.typography.titleMedium,
-                        color = OnSurface,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontWeight = FontWeight.Bold
                     )
                     
@@ -141,8 +137,10 @@ fun OnboardingScreen(
                         shape = RoundedCornerShape(12.dp),
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Primary,
-                            unfocusedBorderColor = OnSurfaceVariant
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface
                         )
                     )
                 }
@@ -159,12 +157,12 @@ fun OnboardingScreen(
                         Checkbox(
                             checked = termsAccepted,
                             onCheckedChange = { termsAccepted = it },
-                            colors = CheckboxDefaults.colors(checkedColor = Primary)
+                            colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.primary)
                         )
                         Text(
                             text = stringResource(R.string.terms_and_privacy_consent),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = OnSurface,
+                            color = MaterialTheme.colorScheme.onSurface,
                             fontSize = 14.sp
                         )
                     }
@@ -176,19 +174,19 @@ fun OnboardingScreen(
                         Text(
                             text = termsLabel,
                             style = MaterialTheme.typography.labelMedium,
-                            color = Primary,
+                            color = MaterialTheme.colorScheme.primary,
                             textDecoration = TextDecoration.Underline,
                             modifier = Modifier.clickable {
-                                coroutineScope.launch { snackbarHostState.showSnackbar(comingSoonMsg + termsLabel) }
+                                showTermsDialog = true
                             }
                         )
                         Text(
                             text = privacyLabel,
                             style = MaterialTheme.typography.labelMedium,
-                            color = Primary,
+                            color = MaterialTheme.colorScheme.primary,
                             textDecoration = TextDecoration.Underline,
                             modifier = Modifier.clickable {
-                                coroutineScope.launch { snackbarHostState.showSnackbar(comingSoonMsg + privacyLabel) }
+                                showPrivacyDialog = true
                             }
                         )
                     }
@@ -210,13 +208,13 @@ fun OnboardingScreen(
                         .fillMaxWidth()
                         .height(56.dp),
                     shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                     enabled = selectedDate != null && avgCycleLength.isNotEmpty() && termsAccepted
                 ) {
                     Text(
                         text = stringResource(R.string.start_tracking),
                         style = MaterialTheme.typography.titleMedium,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onPrimary
                     )
                 }
                 
@@ -236,7 +234,7 @@ fun OnboardingScreen(
                             }
                             showDatePicker = false
                         }) {
-                            Text("OK", color = Primary)
+                            Text("OK", color = MaterialTheme.colorScheme.primary)
                         }
                     },
                     dismissButton = {
@@ -250,4 +248,59 @@ fun OnboardingScreen(
             }
         }
     }
+
+    if (showTermsDialog) {
+        LegalContentDialog(
+            title = stringResource(R.string.terms_of_use),
+            content = stringResource(R.string.terms_of_use_content),
+            onDismiss = { showTermsDialog = false }
+        )
+    }
+
+    if (showPrivacyDialog) {
+        LegalContentDialog(
+            title = stringResource(R.string.privacy_policy),
+            content = stringResource(R.string.privacy_policy_content),
+            onDismiss = { showPrivacyDialog = false }
+        )
+    }
+}
+
+@Composable
+fun LegalContentDialog(
+    title: String,
+    content: String,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxHeight(0.8f)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                Text(
+                    text = content.replace("<b>", "").replace("</b>", ""),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.close), color = MaterialTheme.colorScheme.primary)
+            }
+        },
+        shape = RoundedCornerShape(24.dp),
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+    )
 }

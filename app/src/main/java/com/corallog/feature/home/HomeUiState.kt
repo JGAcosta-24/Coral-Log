@@ -1,6 +1,7 @@
 package com.corallog.feature.home
 
 import com.corallog.data.CyclePhase
+import java.time.LocalDate
 
 /**
  * Represents the UI state for the Home screen.
@@ -11,7 +12,8 @@ sealed interface HomeUiState {
     data class Success(
         val daysStatus: DaysStatus,
         val currentPhase: CyclePhase,
-        val phaseSymptoms: List<Int> // Resource IDs
+        val phaseSymptoms: List<Int>, // Resource IDs
+        val predictedDate: LocalDate? = null
     ) : HomeUiState
 }
 

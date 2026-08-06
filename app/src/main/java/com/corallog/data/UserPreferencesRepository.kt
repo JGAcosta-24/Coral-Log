@@ -23,6 +23,7 @@ class UserPreferencesRepository(private val context: Context) {
 
     private object PreferencesKeys {
         val THEME_MODE = stringPreferencesKey("theme_mode")
+        val THEME_SELECTION = stringPreferencesKey("theme_selection")
         val FONT_FAMILY = stringPreferencesKey("font_family")
         val IS_ONBOARDING_COMPLETED = booleanPreferencesKey("is_onboarding_completed")
         val AVG_CYCLE_LENGTH = intPreferencesKey("average_cycle_length")
@@ -42,6 +43,14 @@ class UserPreferencesRepository(private val context: Context) {
      */
     val userThemeFlow: Flow<String> = context.dataStore.data.map { preferences ->
         preferences[PreferencesKeys.THEME_MODE] ?: "CORAL"
+    }
+
+    /**
+     * Flow that emits the current theme selection (SYSTEM, LIGHT, DARK).
+     * Defaults to "SYSTEM" if no value is stored.
+     */
+    val userThemeSelectionFlow: Flow<String> = context.dataStore.data.map { preferences ->
+        preferences[PreferencesKeys.THEME_SELECTION] ?: "SYSTEM"
     }
 
     /**
@@ -82,6 +91,15 @@ class UserPreferencesRepository(private val context: Context) {
     suspend fun saveTheme(themeName: String) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.THEME_MODE] = themeName
+        }
+    }
+
+    /**
+     * Updates the user theme selection asynchronously.
+     */
+    suspend fun saveThemeSelection(selection: String) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.THEME_SELECTION] = selection
         }
     }
 

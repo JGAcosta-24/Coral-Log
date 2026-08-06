@@ -33,6 +33,32 @@ val OutlineVariant = Color(0xFF3D3D3D)
 
 val ColorPeriodoRed = Color(0xFFFF5252)
 
+// --- LIGHT THEME PALETTE ---
+val LightPrimary = Color(0xFFD81B60) // Rosa fuerte para acentos (ajustado por contraste)
+val LightOnPrimary = Color(0xFFFFFFFF)
+val LightPrimaryContainer = Color(0xFFFFD9E2) // Rosa pastel muy suave
+val LightOnPrimaryContainer = Color(0xFF3E001D)
+
+val LightSecondary = Color(0xFF75565E)
+val LightOnSecondary = Color(0xFFFFFFFF)
+val LightSecondaryContainer = Color(0xFFFFD9E2)
+val LightOnSecondaryContainer = Color(0xFF2B151C)
+
+val LightBackground = Color(0xFFFFFBFF) // Blanco limpio
+val LightOnBackground = Color(0xFF201A1B)
+val LightSurface = Color(0xFFFFFBFF)
+val LightOnSurface = Color(0xFF201A1B)
+val LightSurfaceVariant = Color(0xFFF3DDE1)
+val LightOnSurfaceVariant = Color(0xFF514346)
+
+val LightSurfaceContainer = Color(0xFFF7F2F3)
+val LightSurfaceContainerLow = Color(0xFFFCF8F8)
+val LightSurfaceContainerHigh = Color(0xFFF1ECED)
+val LightSurfaceContainerHighest = Color(0xFFEBE6E7)
+
+val LightOutline = Color(0xFF837377)
+val LightOutlineVariant = Color(0xFFD5C2C5)
+
 // Paleta Tema "Coral" (Original)
 val PhaseMenstrualCoral = Color(0xFFEF5350)
 val PhaseFolicularCoral = Color(0xFF80CBC4)
