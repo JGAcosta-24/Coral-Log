@@ -144,16 +144,18 @@ fun CalendarScreen(
                 }
             } else {
                 // Inline logging section (HU-02 updated)
-                val currentSymptom = uiState.symptoms[uiState.selectedDate.toString()]
                 LoggingSectionCard(
                     selectedDate = uiState.selectedDate,
-                    isBleeding = currentSymptom?.isBleeding ?: false,
-                    flowLevel = currentSymptom?.flowLevel ?: 0,
-                    crampIntensity = currentSymptom?.crampIntensity ?: 0,
-                    clotLevel = currentSymptom?.clotLevel ?: 0,
-                    onUpdate = { bleeding, flow, cramps, clots ->
-                        viewModel.onSaveSymptom(uiState.selectedDate, bleeding, flow, cramps, clots)
-                    }
+                    isBleeding = uiState.selectedIsBleeding,
+                    flowLevel = uiState.selectedFlowLevel,
+                    crampIntensity = uiState.selectedCrampIntensity,
+                    clotLevel = uiState.selectedClotLevel,
+                    hasIllness = uiState.selectedHasIllness,
+                    onUpdateBleeding = { viewModel.onUpdateBleeding(it) },
+                    onUpdateFlow = { viewModel.onUpdateFlow(it) },
+                    onUpdateCramps = { viewModel.onUpdateCramps(it) },
+                    onUpdateClots = { viewModel.onUpdateClots(it) },
+                    onToggleIllness = { viewModel.onToggleIllness(it) }
                 )
             }
             
@@ -322,7 +324,12 @@ fun LoggingSectionCard(
     flowLevel: Int,
     crampIntensity: Int,
     clotLevel: Int,
-    onUpdate: (Boolean, Int, Int, Int) -> Unit
+    hasIllness: Boolean,
+    onUpdateBleeding: (Boolean) -> Unit,
+    onUpdateFlow: (Int) -> Unit,
+    onUpdateCramps: (Int) -> Unit,
+    onUpdateClots: (Int) -> Unit,
+    onToggleIllness: (Boolean) -> Unit
 ) {
     val flowOptions = listOf(
         stringResource(R.string.flow_min),
@@ -370,7 +377,7 @@ fun LoggingSectionCard(
             ) {
                 Checkbox(
                     checked = isBleeding,
-                    onCheckedChange = { onUpdate(it, flowLevel, crampIntensity, clotLevel) },
+                    onCheckedChange = { onUpdateBleeding(it) },
                     colors = CheckboxDefaults.colors(
                         checkedColor = LocalPhaseColors.current.menstrual,
                         checkmarkColor = MaterialTheme.colorScheme.onSurface
@@ -395,7 +402,7 @@ fun LoggingSectionCard(
                 options = flowOptions,
                 selectedIndex = flowLevel - 1,
                 enabled = isBleeding,
-                onSelectionChange = { index -> onUpdate(isBleeding, index + 1, crampIntensity, clotLevel) }
+                onSelectionChange = { index -> onUpdateFlow(index + 1) }
             )
 
             SymptomDropdownRow(
@@ -403,7 +410,7 @@ fun LoggingSectionCard(
                 options = flowOptions,
                 selectedIndex = crampIntensity - 1,
                 enabled = isBleeding,
-                onSelectionChange = { index -> onUpdate(isBleeding, flowLevel, index + 1, clotLevel) }
+                onSelectionChange = { index -> onUpdateCramps(index + 1) }
             )
 
             SymptomDropdownRow(
@@ -411,8 +418,40 @@ fun LoggingSectionCard(
                 options = clotOptions,
                 selectedIndex = clotLevel - 1,
                 enabled = isBleeding,
-                onSelectionChange = { index -> onUpdate(isBleeding, flowLevel, crampIntensity, index + 1) }
+                onSelectionChange = { index -> onUpdateClots(index + 1) }
             )
+
+            HorizontalDivider(
+                modifier = Modifier.padding(vertical = 4.dp),
+                thickness = 1.dp,
+                color = MaterialTheme.colorScheme.outlineVariant
+            )
+
+            // Illness Toggle Section - Restricted to bleeding days (HU Polishing)
+            if (isBleeding) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = stringResource(R.string.label_illness),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Switch(
+                            checked = hasIllness,
+                            onCheckedChange = { onToggleIllness(it) }
+                        )
+                    }
+                    Text(
+                        text = stringResource(R.string.desc_illness),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
         }
     }
 }

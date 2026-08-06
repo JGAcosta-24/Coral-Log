@@ -119,5 +119,7 @@
     <string name="flow_label">Flujo</string>
     <string name="cramps_label">Cólicos</string>
     <string name="clots_label">Coágulos</string>
+    <string name="label_illness">Enfermedad / Factor externo</string>
+    <string name="desc_illness">Este ciclo no se tomará en cuenta para el cálculo de promedios.</string>
     <string name="registration_for">Registro para %1$d de %2$s</string>
 </resources>

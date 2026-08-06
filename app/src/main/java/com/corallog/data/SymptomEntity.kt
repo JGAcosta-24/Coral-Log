@@ -18,5 +18,6 @@ data class SymptomEntity(
     val isBleeding: Boolean,
     val flowLevel: Int = 0,
     val crampIntensity: Int = 0,
-    val clotLevel: Int = 0
+    val clotLevel: Int = 0,
+    val hasIllness: Boolean = false
 )

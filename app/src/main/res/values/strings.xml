@@ -119,5 +119,7 @@
     <string name="flow_label">Flow</string>
     <string name="cramps_label">Cramps</string>
     <string name="clots_label">Clots</string>
+    <string name="label_illness">Illness / External factor</string>
+    <string name="desc_illness">This cycle will be excluded from the average metrics.</string>
     <string name="registration_for">Log for %1$d %2$s</string>
 </resources>
