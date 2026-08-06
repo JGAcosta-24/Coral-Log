@@ -1,6 +1,10 @@
 <resources>
     <string name="app_name">Coral Log</string>
     <string name="settings">Ajustes</string>
+    <string name="display_mode">Modo de Pantalla</string>
+    <string name="mode_system">Predeterminado del Sistema</string>
+    <string name="mode_light">Modo Claro</string>
+    <string name="mode_dark">Modo Oscuro</string>
     <string name="theme">Tema</string>
     <string name="theme_coral">Tema Coral</string>
     <string name="theme_ocean">Tema Océano</string>
@@ -115,5 +119,7 @@
     <string name="flow_label">Flujo</string>
     <string name="cramps_label">Cólicos</string>
     <string name="clots_label">Coágulos</string>
+    <string name="label_illness">Enfermedad / Factor externo</string>
+    <string name="desc_illness">Este ciclo no se tomará en cuenta para el cálculo de promedios.</string>
     <string name="registration_for">Registro para %1$d de %2$s</string>
 </resources>

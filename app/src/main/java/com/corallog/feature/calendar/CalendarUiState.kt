@@ -23,5 +23,11 @@ data class CalendarUiState(
     val cycleStarts: List<LocalDate> = emptyList(),
     val phaseMap: Map<LocalDate, CyclePhase> = emptyMap(),
     val averageCycleLength: Int = 28,
+    // Temporary editing state for the Bottom Sheet/Card
+    val selectedIsBleeding: Boolean = false,
+    val selectedFlowLevel: Int = 0,
+    val selectedCrampIntensity: Int = 0,
+    val selectedClotLevel: Int = 0,
+    val selectedHasIllness: Boolean = false,
     val isLoading: Boolean = false
 )

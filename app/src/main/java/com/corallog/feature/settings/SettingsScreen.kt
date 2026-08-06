@@ -31,8 +31,10 @@ fun SettingsScreen(
             is SettingsUiState.Success -> {
                 SettingsContent(
                     currentTheme = state.currentTheme,
+                    currentThemeSelection = state.currentThemeSelection,
                     currentFont = state.currentFont,
                     onThemeSelected = { viewModel.updateTheme(it) },
+                    onThemeSelectionSelected = { viewModel.updateThemeSelection(it) },
                     onFontSelected = { viewModel.updateFont(it) }
                 )
             }
@@ -44,8 +46,10 @@ fun SettingsScreen(
 @Composable
 private fun SettingsContent(
     currentTheme: String,
+    currentThemeSelection: String,
     currentFont: String,
     onThemeSelected: (String) -> Unit,
+    onThemeSelectionSelected: (String) -> Unit,
     onFontSelected: (String) -> Unit
 ) {
     Column(
@@ -58,6 +62,15 @@ private fun SettingsContent(
             text = stringResource(R.string.settings),
             style = MaterialTheme.typography.headlineMedium
         )
+
+        // Display Mode Selector
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                text = stringResource(R.string.display_mode),
+                style = MaterialTheme.typography.titleMedium
+            )
+            ThemeSelectionDropdown(currentThemeSelection, onThemeSelectionSelected)
+        }
 
         // Theme Selector
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -75,6 +88,54 @@ private fun SettingsContent(
                 style = MaterialTheme.typography.titleMedium
             )
             FontDropdown(currentFont, onFontSelected)
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ThemeSelectionDropdown(
+    currentSelection: String,
+    onSelectionSelected: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    val options = listOf(
+        "SYSTEM" to stringResource(R.string.mode_system),
+        "LIGHT" to stringResource(R.string.mode_light),
+        "DARK" to stringResource(R.string.mode_dark)
+    )
+
+    val currentLabel = options.find { it.first == currentSelection }?.second
+        ?: stringResource(R.string.mode_system)
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded },
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        OutlinedTextField(
+            readOnly = true,
+            value = currentLabel,
+            onValueChange = { },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+            modifier = Modifier.menuAnchor().fillMaxWidth()
+        )
+
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            options.forEach { (value, label) ->
+                DropdownMenuItem(
+                    text = { Text(label) },
+                    onClick = {
+                        onSelectionSelected(value)
+                        expanded = false
+                    }
+                )
+            }
         }
     }
 }

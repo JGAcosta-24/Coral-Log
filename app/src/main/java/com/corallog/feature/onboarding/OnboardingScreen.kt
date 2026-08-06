@@ -1,5 +1,6 @@
 package com.corallog.feature.onboarding
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -12,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -51,7 +53,7 @@ fun OnboardingScreen(
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        containerColor = Background
+        containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
         Box(
             modifier = Modifier
@@ -59,6 +61,15 @@ fun OnboardingScreen(
                 .padding(innerPadding)
                 .padding(24.dp)
         ) {
+            // App Logo in top right corner
+            Image(
+                painter = painterResource(id = R.drawable.ts_logo),
+                contentDescription = "App Logo",
+                modifier = Modifier
+                    .size(64.dp)
+                    .align(Alignment.TopEnd)
+            )
+
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -71,7 +82,7 @@ fun OnboardingScreen(
                 Text(
                     text = stringResource(R.string.onboarding_welcome),
                     style = MaterialTheme.typography.headlineLarge,
-                    color = Primary,
+                    color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Black,
                     textAlign = TextAlign.Center
                 )
@@ -79,7 +90,7 @@ fun OnboardingScreen(
                 Text(
                     text = stringResource(R.string.onboarding_subtitle),
                     style = MaterialTheme.typography.bodyLarge,
-                    color = OnSurfaceVariant,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center
                 )
 
@@ -88,7 +99,7 @@ fun OnboardingScreen(
                     Text(
                         text = stringResource(R.string.last_period_question),
                         style = MaterialTheme.typography.titleMedium,
-                        color = OnSurface,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontWeight = FontWeight.Bold
                     )
                     
@@ -96,7 +107,7 @@ fun OnboardingScreen(
                         onClick = { showDatePicker = true },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Primary)
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary)
                     ) {
                         Icon(Icons.Default.CalendarToday, contentDescription = null)
                         Spacer(modifier = Modifier.width(12.dp))
@@ -119,12 +130,12 @@ fun OnboardingScreen(
                         Checkbox(
                             checked = termsAccepted,
                             onCheckedChange = { termsAccepted = it },
-                            colors = CheckboxDefaults.colors(checkedColor = Primary)
+                            colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.primary)
                         )
                         Text(
                             text = stringResource(R.string.terms_and_privacy_consent),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = OnSurface,
+                            color = MaterialTheme.colorScheme.onSurface,
                             fontSize = 14.sp
                         )
                     }
@@ -136,7 +147,7 @@ fun OnboardingScreen(
                         Text(
                             text = termsLabel,
                             style = MaterialTheme.typography.labelMedium,
-                            color = Primary,
+                            color = MaterialTheme.colorScheme.primary,
                             textDecoration = TextDecoration.Underline,
                             modifier = Modifier.clickable {
                                 showTermsDialog = true
@@ -145,7 +156,7 @@ fun OnboardingScreen(
                         Text(
                             text = privacyLabel,
                             style = MaterialTheme.typography.labelMedium,
-                            color = Primary,
+                            color = MaterialTheme.colorScheme.primary,
                             textDecoration = TextDecoration.Underline,
                             modifier = Modifier.clickable {
                                 showPrivacyDialog = true
@@ -175,7 +186,7 @@ fun OnboardingScreen(
                     Text(
                         text = stringResource(R.string.start_tracking),
                         style = MaterialTheme.typography.titleMedium,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onPrimary
                     )
                 }
                 
@@ -195,7 +206,7 @@ fun OnboardingScreen(
                             }
                             showDatePicker = false
                         }) {
-                            Text("OK", color = Primary)
+                            Text("OK", color = MaterialTheme.colorScheme.primary)
                         }
                     },
                     dismissButton = {
@@ -239,7 +250,7 @@ fun LegalContentDialog(
             Text(
                 text = title,
                 style = MaterialTheme.typography.headlineSmall,
-                color = Primary,
+                color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Bold
             )
         },
@@ -252,16 +263,16 @@ fun LegalContentDialog(
                 Text(
                     text = content.replace("<b>", "").replace("</b>", ""),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = OnSurface
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.close), color = Primary)
+                Text(stringResource(R.string.close), color = MaterialTheme.colorScheme.primary)
             }
         },
         shape = RoundedCornerShape(24.dp),
-        containerColor = SurfaceContainerHigh
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
     )
 }

@@ -90,7 +90,7 @@ class CalendarViewModel(
         }
     }
 
-    private suspend fun refreshHistoricalData() {
+private suspend fun refreshHistoricalData() {
         withContext(Dispatchers.Default) {
             val bleedingDates = localBleedingDates.toList().sorted()
             val recordedStarts = CyclePhaseCalculator.calculateAllCycleStarts(bleedingDates)
@@ -98,51 +98,112 @@ class CalendarViewModel(
         }
     }
 
+    fun onDateSelected(date: LocalDate) {
+        val currentSymptom = _uiState.value.symptoms[date.toString()]
+        _uiState.update { it.copy(
+            selectedDate = date,
+            selectedIsBleeding = currentSymptom?.isBleeding ?: false,
+            selectedFlowLevel = currentSymptom?.flowLevel ?: 0,
+            selectedCrampIntensity = currentSymptom?.crampIntensity ?: 0,
+            selectedClotLevel = currentSymptom?.clotLevel ?: 0,
+            selectedHasIllness = currentSymptom?.hasIllness ?: false
+        ) }
+    }
+
     /**
-     * Toggles a bleeding day with LOCAL-FIRST logic for absolute zero latency.
+     * Updates the bleeding state and persists immediately.
      */
-    fun onSaveSymptom(
-        date: LocalDate,
-        isBleeding: Boolean,
-        flowLevel: Int,
-        crampIntensity: Int,
-        clotLevel: Int = 0
-    ) {
-        // 1. UPDATE LOCAL TRUTH IMMEDIATELY
+    fun onUpdateBleeding(isBleeding: Boolean) {
+        _uiState.update { it.copy(
+            selectedIsBleeding = isBleeding,
+            // Restrict illness to bleeding days only (HU Polishing)
+            selectedHasIllness = if (!isBleeding) false else it.selectedHasIllness,
+            // Reset levels if not bleeding
+            selectedFlowLevel = if (!isBleeding) 0 else it.selectedFlowLevel,
+            selectedCrampIntensity = if (!isBleeding) 0 else it.selectedCrampIntensity,
+            selectedClotLevel = if (!isBleeding) 0 else it.selectedClotLevel
+        ) }
+        onSaveSymptom()
+    }
+
+    /**
+     * Updates the flow level state and persists immediately.
+     */
+    fun onUpdateFlow(level: Int) {
+        _uiState.update { it.copy(selectedFlowLevel = level) }
+        onSaveSymptom()
+    }
+
+    /**
+     * Updates the cramp intensity state and persists immediately.
+     */
+    fun onUpdateCramps(intensity: Int) {
+        _uiState.update { it.copy(selectedCrampIntensity = intensity) }
+        onSaveSymptom()
+    }
+
+    /**
+     * Updates the clot level state and persists immediately.
+     */
+    fun onUpdateClots(level: Int) {
+        _uiState.update { it.copy(selectedClotLevel = level) }
+        onSaveSymptom()
+    }
+
+    /**
+     * Toggles the illness state and persists immediately.
+     */
+    fun onToggleIllness(isIll: Boolean) {
+        _uiState.update { it.copy(selectedHasIllness = isIll) }
+        onSaveSymptom()
+    }
+
+    /**
+     * Persists the current temporary state to the database with LOCAL-FIRST logic for absolute zero latency.
+     * Triggered when the user "closes" the logging section or explicitly saves.
+     */
+    fun onSaveSymptom() {
+        // Extraemos los valores del estado (Lógica de Dev)
+        val state = _uiState.value
+        val date = state.selectedDate
+        val isBleeding = state.selectedIsBleeding
+        val flowLevel = state.selectedFlowLevel
+        val crampIntensity = state.selectedCrampIntensity
+        val clotLevel = state.selectedClotLevel
+        val hasIllness = state.selectedHasIllness
+
+        // 1. UPDATE LOCAL TRUTH IMMEDIATELY (Lógica de tu Fix)
         if (isBleeding) {
             localBleedingDates.add(date)
         } else {
             localBleedingDates.remove(date)
         }
 
-        // 2. TRIGGER SYNC UI INSTANTLY
+        // 2. TRIGGER SYNC UI INSTANTLY (Lógica de tu Fix)
         triggerFullSync()
 
-        // 3. PERSIST IN BACKGROUND
+        // 3. PERSIST IN BACKGROUND (Lógica de tu Fix)
         viewModelScope.launch {
-            if (isBleeding) {
+            if (isBleeding || hasIllness) {
                 val symptom = SymptomEntity(
                     date = date.toString(),
-                    isBleeding = true,
+                    isBleeding = isBleeding,
                     flowLevel = flowLevel,
                     crampIntensity = crampIntensity,
-                    clotLevel = clotLevel
+                    clotLevel = clotLevel,
+                    hasIllness = hasIllness
                 )
                 repository.upsertSymptom(symptom)
             } else {
                 repository.deleteSymptomByDate(date.toString())
             }
         }
-    }
+    } 
 
     fun onMonthChange(newMonth: YearMonth) {
         _uiState.update { it.copy(currentMonth = newMonth) }
         triggerFullSync() // Immediate recalculation for the new month view
         loadSymptomsForMonth(newMonth)
-    }
-
-    fun onDateSelected(date: LocalDate) {
-        _uiState.update { it.copy(selectedDate = date) }
     }
 
     private suspend fun syncCyclesToDatabase(identifiedStarts: List<LocalDate>) {
